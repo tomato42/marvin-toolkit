@@ -53,9 +53,10 @@ to perform in constant time way, it depends on the previous RSA
 decryption step being constant time.
 That is, security of RSA OEAP requires big integer arithmetic that is
 constant time.
-For example, both gmplib and OpenSSL BIGNUM don't provide a public
-interface to perform the de-blinding step and conversion to a byte string
-in side-channel free manner.
+For example, gmplib does not provide high-level functions for side-channel
+free deblinding (multiplication modulo) while and OpenSSL BIGNUM don't provide
+a public interface to perform the de-blinding step and conversion to a byte
+string in side-channel free manner.
 
 ## How to test?
 
