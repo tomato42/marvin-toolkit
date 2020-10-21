@@ -58,6 +58,17 @@ free deblinding (multiplication modulo) while and OpenSSL BIGNUM doesn't
 provide a public interface to perform the de-blinding step and conversion to
 a byte string in side-channel free manner.
 
+If deprecation and later removal of the decryption support is not possible,
+document the API as known vulnerable.
+The users of such an API should be inspected to check if the timing signal
+is likely to leak to other processes, VMs or over the network.
+The last option being the most severe.
+
+In case users of the API know a priori what's the expected size of the
+decrypted secret, providing an API that generates a random secret of that size
+and returns it in case of errors in padding is the recommended way to
+workaround this vulnerability. See the TLS 1.2 RFC 5246 page 58 for details.
+
 ## How to test?
 
 To test a library or application you need to load private RSA key, and
