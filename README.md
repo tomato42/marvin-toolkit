@@ -69,6 +69,15 @@ decrypted secret, providing an API that generates a random secret of that size
 and returns it in case of errors in padding is the recommended way to
 workaround this vulnerability. See the TLS 1.2 RFC 5246 page 58 for details.
 
+## Are signatures vulnerable?
+
+To the best of our knowledge APIs for performing RSA signatures,
+both RSA-PSS and RSA PKCS#1 v1.5, are not affected.
+Though please note that this assumes that the RSA implementation uses blinding.
+
+That being said, all Bleichenbacher attacks can be used to create an arbitrary
+signature using the key exposed through vulnerable encryption API.
+
 ## How to test?
 
 To test a library or application you need to load private RSA key, and
