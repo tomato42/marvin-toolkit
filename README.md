@@ -22,32 +22,36 @@ needs to process the error in side-channel free manner.
 
 If you think that's a lot of side-channel free code, you'd be right.
 
-As it's not the typical requirement for written code, especially outside of
-cryptographic libraries, it's likely that even if it was written to
-side-channel free standard, it wasn't tested for at least constant-timeness.
+As side-channel free behaviour is not the typical requirement for written code,
+especially outside of cryptographic libraries, it's likely that even if a
+piece of code handling RSA decryption was written with side-channel free
+behaviour in mind, it wasn't tested for at least constant-timeness.
 
 This is where this toolkit comes in.
 
 ## How bad it is?
 
 If an attacker can measure precisely the decryption time of the RSA ciphertext
-of their choosing, we've shown decryption of ciphertexts in as little as 20
-minutes as possible.
+of their choosing, we've shown decryption of ciphertexts possible in as
+little as 20 minutes.
 
-That may be usable for TLS session decryption, e-mail decryption or
-forging of signatures.
+That decrypted secret may be used for for TLS session decryption, e-mail
+decryption or forging of signatures.
 
 ## Who is affected?
 
 Any application that uses RSA decryption may be vulnerable.
-Protocols that use RSA PKCS#1 v1.5 encryption padding are especially
+Protocols that use RSA encryption with PKCS#1 v1.5 padding are especially
 vulnerable.
 RSA OEAP defined in PKCS#1 v2.0 can also be implemented in a way that
-leaks enough information to mount a timing attack.
+leaks enough information to mount a timing attack and decrypt the ciphertext
+or forge a signature.
 
 ## What's the recommended solution?
 
-Stop providing RSA PKCS#1 v1.5 decryption support. If possible, don't
+As an application programmer: stop using RSA encryption.
+If you're library vendor stop providing RSA PKCS#1 v1.5 decryption support.
+If possible, don't
 provide RSA OEAP decryption support either—while depadding is much easier
 to perform in side-channel free way, it depends on the previous RSA
 decryption step being constant time.
@@ -73,10 +77,12 @@ workaround this vulnerability. See the TLS 1.2 RFC 5246 page 58 for details.
 
 To the best of our knowledge APIs for performing RSA signatures,
 both RSA-PSS and RSA PKCS#1 v1.5, are not affected.
-Though please note that this assumes that the RSA implementation uses blinding.
+Though please note that this assumes that the RSA implementation uses blinding
+when computing the signature.
 
-That being said, all Bleichenbacher attacks can be used to create an arbitrary
-signature using the key exposed through vulnerable encryption API.
+That being said, all Bleichenbacher-style attacks can be used to create an
+arbitrary signature using the key exposed through the vulnerable decryption
+API.
 
 ## How to test?
 
@@ -110,7 +116,7 @@ For a script testing the RSA key exchange in TLS see
 
 ### Preparation
 
-The scripts here require modern version of Python (at least 3.8), but they
+The scripts here require modern version of Python (at least 3.7), but they
 don't have to be executed on the same machine that executes the timing tests.
 
 To create the virtual environment and install the dependencies run the
@@ -123,8 +129,8 @@ to generate ciphertexts and analyse results.
 It will also create two more directories: `certgen` a bash library for
 generation of certificates and `tlsfuzzer` where the analysis script lives.
 
-It's safe to re-run the script, while it will create those directories it
-will not overwrite them.
+It's safe to re-run the script, while it creates those directories it
+will not overwrite them or their contents.
 
 ### Generating the ciphertexts
 
