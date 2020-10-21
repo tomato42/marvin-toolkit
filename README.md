@@ -49,14 +49,14 @@ leaks enough information to mount a timing attack.
 
 Stop providing RSA PKCS#1 v1.5 decryption support. If possible, don't
 provide RSA OEAP decryption support either—while depadding is much easier
-to perform in constant time way, it depends on the previous RSA
+to perform in side-channel free way, it depends on the previous RSA
 decryption step being constant time.
 That is, security of RSA OEAP requires big integer arithmetic that is
 constant time.
 For example, gmplib does not provide high-level functions for side-channel
-free deblinding (multiplication modulo) while and OpenSSL BIGNUM don't provide
-a public interface to perform the de-blinding step and conversion to a byte
-string in side-channel free manner.
+free deblinding (multiplication modulo) while and OpenSSL BIGNUM doesn't
+provide a public interface to perform the de-blinding step and conversion to
+a byte string in side-channel free manner.
 
 ## How to test?
 
@@ -70,5 +70,24 @@ mode observations are necessary to show that a library is vulnerable.
 In practice, for a local library call, with nanosecond precision timers,
 a collection of 100k to a 1M calls per ciphertext are sufficient to
 conclusively prove a volnerability.
-For a fast library collection of 10M calls may be enough to prove that
+For a fast library collection of 10M calls may be enough to show that
 if the side channel exists, it's smaller than a single CPU cycle.
+For a slow one it make take even 1B calls.
+As a rule of thumb start with 100k and then increase by an order of magnitude
+until tests show too small timing side channel to be possible.
+Once you've collected enough data you need to perform statistical tests
+to check for presence of the side-channel.
+
+This toolkit provides 3 tools:
+
+1. Script to generate the RSA keys
+2. Script to generate the malformed RSA ciphertexts
+3. Script to analyse the collected results
+
+### Preparation
+
+The scripts here require modern version of Python (at least 3.8), but they
+don't have to be executed on the same machine that executes the timing tests.
+
+To create the virtual environment and install the dependencies run the
+`step0.sh` script.
