@@ -132,6 +132,24 @@ generation of certificates and `tlsfuzzer` where the analysis script lives.
 It's safe to re-run the script, while it creates those directories it
 will not overwrite them or their contents.
 
+### Generating the certificates
+
+You can generate the certificates using the `step1.sh` script.
+It will create three directories: `rsa1024`, `rsa2048` and `rsa4096` with the
+key in 3 different formats: old OpenSSL, PKCS#8 and PKCS#12 (the password in
+PKCS#12 file is empty). Use whichever is easiest to work with with your
+application.
+It also generates self signed certificates signed with those keys, in case
+the key store requires associating a key with certificate for use.
+
+You need to pass the certificates to the script generating ciphertexts.
+
+There is nothing special about those keys, the script is provided only for
+convinience.
+
+CAUTION: if you regenerate certificates you MUST regenerate the ciphertexts
+or the test results will be meaningless.
+
 ### Generating the ciphertexts
 
 <!-- what kind of ciphertexts to generate, which ones are useful for
