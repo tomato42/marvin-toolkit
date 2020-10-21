@@ -80,19 +80,19 @@ signature using the key exposed through vulnerable encryption API.
 
 ## How to test?
 
-To test a library or application you need to load private RSA key, and
-time how long the API call takes to process specific ciphertexts.
+To test a library or application you need to time how long the API call takes
+to process specific ciphertexts.
 You need to test the decryption times repeatedly to collect enough data
 for statistically significant result.
 The longer the library takes to process the message with the ciphertext
-and the smaller the difference between valid and invalid plaintext, the
-mode observations are necessary to show that a library is vulnerable.
+and the smaller the difference between different ciphertexts, the
+more observations are necessary to show that a library is vulnerable.
 In practice, for a local library call, with nanosecond precision timers,
 a collection of 100k to a 1M calls per ciphertext are sufficient to
 conclusively prove a volnerability.
-For a fast library collection of 10M calls may be enough to show that
+For a fast library, collection of 10M calls may be enough to show that
 if the side channel exists, it's smaller than a single CPU cycle.
-For a slow one it make take even 1B calls.
+For a slow one it make take 1B calls or more.
 As a rule of thumb start with 100k and then increase by an order of magnitude
 until tests show too small timing side channel to be possible.
 Once you've collected enough data you need to perform statistical tests
@@ -101,8 +101,12 @@ to check for presence of the side-channel.
 This toolkit provides 3 tools:
 
 1. Script to generate the RSA keys
-2. Script to generate the malformed RSA ciphertexts
+2. Script to generate the RSA ciphertexts with known plaintext structure
 3. Script to analyse the collected results
+
+They have been created with a tests running against a local API in mind.
+For a script testing the RSA key exchange in TLS see
+[tlsfuzzer documentation](https://tlsfuzzer.readthedocs.io/en/latest/timing-analysis.html).
 
 ### Preparation
 
@@ -111,3 +115,34 @@ don't have to be executed on the same machine that executes the timing tests.
 
 To create the virtual environment and install the dependencies run the
 `step0.sh` script.
+
+This script will create a python virtual environment in `marvin-venv`
+directory and install all the necessary dependencies for the scripts
+to generate ciphertexts and analyse results.
+
+It will also create two more directories: `certgen` a bash library for
+generation of certificates and `tlsfuzzer` where the analysis script lives.
+
+It's safe to re-run the script, while it will create those directories it
+will not overwrite them.
+
+### Generating the ciphertexts
+
+<!-- what kind of ciphertexts to generate, which ones are useful for
+detecting vulnerability and which ones are good for looking for where
+the issues is comming from -->
+
+### Writing the test harness
+
+<!-- execute in tuples, in random order, write results to a csv with
+samples in columns -->
+
+### Running the test
+
+<!-- suggest following tlsfuzzer setup for the machine if the necessary
+sample size is large -->
+
+### Analysing the results
+
+<!-- provide examples of clearly exploitable implementations and
+vulnerable implementations, explain what to look for -->
