@@ -14,6 +14,8 @@ A set of tools and instructions to check if a library is vulnerable to the Marvi
 Marvin attack is a continuation of work published by Hanno Böck, Juraj
 Somorovsky, and Craig Young in their ROBOT Attack[[1]](https://robotattack.org/).
 
+Version: 0.1
+
 ## The vulnerability
 
 Marvin is the extension of the same vulnerability described by Daniel
@@ -62,7 +64,7 @@ or forge a signature.
 
 As an application programmer: stop using RSA encryption.
 If you're library vendor stop providing RSA PKCS#1 v1.5 decryption support.
-If possible, don't provide RSA OEAP decryption support either—while depadding
+If possible, don't provide RSA OAEP decryption support either—while depadding
 is much easier to perform in side-channel free way, it depends on the previous
 RSA decryption step being constant time.
 That is, security of RSA OAEP requires big integer arithmetic that is
@@ -170,9 +172,340 @@ the ciphertexts or the test results will be meaningless.
 
 ### Generating the ciphertexts
 
-<!-- what kind of ciphertexts to generate, which ones are useful for
-detecting vulnerability and which ones are good for looking for where
-the issues is comming from -->
+The `step2.py` can generate a wide range of possible ciphertexts, some are
+better for checking for vulnerability, others are better at exploiting it.
+
+#### Refresher for PKCS#1 v1.5 encryption
+
+The RSA PKCS#1 v1.5 standard requires the decrypted ciphertext (so,
+the plaintext) to have the following format:
+
+```
+EM = 0x00 || 0x02 || PS || 0x00 || M
+```
+
+Where `EM` stands for encrypted message, `PS` stands for padding string and
+`M` is the message for encryption, provided by user to the library.
+
+The first byte (0x00) is also called the version byte (though PKCS#1 v2.0
+didn't change it).
+The second byte (0x02) specifies the padding type, for signatures it's
+0x01 and the PS is a repeated 0xff byte. It can also be 0x00 to specify
+no padding, but then first byte of message must be non-zero.
+Padding bytes don't include bytes of size zero.
+
+The miminal size of PS is also specified at 8 bytes.
+
+Thus, a compliant implementation needs to:
+
+1. Perform RSA decryption, convert the integer into a string of bytes
+2. Check if first byte is 0
+3. Check if second bytes is 2
+4. Look for the zero byte separating padding string from message
+5. Check if the length of padding string is at least 8 bytes
+6. (Protocol specific) Check if the message has expected length
+7. (Protocol specific) Check if the message has specific structure
+8. (Protocol specific) In case any tests failed, use the previously generated
+   random message of expected length
+
+All those steps must be performed using side-channel free code.
+
+Different ciphertexts exercise different steps of the above list,
+some exercise multiple.
+
+#### Selecting ciphertexts
+
+Step 1 will be mostly likely influenced by either the bit length of the
+decrypted value or the
+[Hamming weight](https://en.wikipedia.org/wiki/Hamming_weight) of the decrypted
+value—provided that correct blinding is used.
+
+##### Plaintext bit size
+
+Ciphertexts that generate plaintext with bigger than the expected bit
+length are:
+
+* `no_structure`
+* `no_header_with_payload`, for any message length
+* `version_only`
+* `version_with_padding`, for any message length
+* `type_only`
+* `type_with_padding`, for any message length
+
+Ciphertexts that generate plaintext with smaller than the expected bit
+length are:
+
+* `signature_type`, for any message length (though it's only by one bit)
+* `signature_padding`, for any message length (also only by one bit)
+* `no_padding`, for any message size at least 2 bytes smaller than they key
+  size in bytes
+* `too_short_payload` for any padding_sub bigger than 1
+
+The most extreme of those (thus, most likely to show a timing-side channel)
+are the `no_structure` on the high end and the `no_padding` on the low end.
+Use small message sizes (<= 48) for the `no_padding` for strongest signal.
+
+##### Plaintext Hamming weight
+
+Ciphertexts that generate plaintext with high Hamming weight are:
+
+* `signature_padding` for message size small relative to key size (<= 48 bytes
+  as a rule of thumb)
+* `valid_repeated_byte_payload` for long message sizes (>= key size/2) and
+  a message byte with high hamming weight (0xff, 0x7f, 0xbf, etc.)
+
+Ciphertexts that generate plaintext with low Hamming weight are:
+
+* `no_padding` for small message sizes (<= key size/2)
+* `too_short_paylod` for large padding substractions (>= key size/2)
+* `valid_repeated_byte_payload` for long message sizes (>= key size/2) and
+  a message byte with low hamming weight (0x00, 0x01, 0x02, etc.)
+
+The most extreme of those are the `signature_padding` with zero-length message
+and `valid_repeated_byte_payload` for message size 3 bytes shorter than key
+size and a 0x00 message byte.
+
+##### Version byte check
+
+Ciphertexts that generate plaintext with invalid version byte:
+
+* `no_structure`
+* `no_header_with_payload`
+* `type_only`
+* `type_with_padding`
+
+Ciphertexts that generate plaintext with valid version byte:
+
+* `version_only`
+* `version_with_padding`
+* `signature_type`
+* `signature_padding`
+* `no_padding`
+* `header_only`
+* `valid`
+* `zero_byte_in_padding`
+* `valid_repeated_byte_payload`
+* `too_short_payload`
+
+There shouldn't be any special values for this byte, so testing
+`no_structure` and `valid` should be sufficient. Other ciphertexts are
+mostly useful in identification of the source of timing signal.
+
+##### Type byte check
+
+Ciphertexts that generate plaintext with invalid type byte:
+
+* `no_structure`
+* `no_header_with_payload`
+* `version_only`
+* `version_with_padding`
+* `signature_type`
+* `signature_padding`
+* `no_padding`, for messages shorter than (key length - 2)
+* `too_short_payload`, for non zero padding substraction
+
+Ciphertexts that generate plaintext with valid type byte:
+
+* `type_only`
+* `type_with_padding`
+* `header_only`
+* `valid`
+* `zero_byte_in_padding`
+* `valid_repeated_byte_payload`
+* `too_short_payload`, for zero padding substraction
+
+There are two special values for the type byte, 0x01 and 0x02, so
+it's good idea to test `valid` for the positive case and both `no_structure`
+and `signature_type` or `signature_padding`.
+
+##### Padding byte separator
+
+Ciphertexts that produce plaintext without padding and message separator:
+
+* `no_structure`
+* `type_only`
+* `header_only`
+
+Ciphertexts that produce plaintext with padding and message separator
+(i.e. ones that will have a 0 byte at the position of (key_size -
+message_size) of the plaintext):
+
+* `no_header_with_payload`
+* `version_with_padding`
+* `type_with_padding`
+* `signature_type`
+* `signature_padding`
+* `no_padding`
+* `valid`
+* `zero_byte_in_padding`
+* `valid_repeated_byte_payload`
+* `too_short_payload`
+
+Which ciphertexts are interesting is highly dependent on the specific
+implementation. The `no_structure` and `header_only` are generally the best
+for negative test case, but for positive tests generally the `valid` and
+`no_header_with_payload` are most likely to show interesting timing signal.
+
+##### Padding length check
+
+For padding length check the implementation can use two algorithms:
+
+1. look for first non zero byte, consider it a padding type, look for next
+   zero byte (this is incorrect)
+2. Decrypt the ciphertext, and look at bytes 3 to 10 (inclusive) of plaintext,
+   verify that all of them are non-zero (this is the correct approach)
+
+So below are two sets of ciphertexts, first pair for the first type of
+implementation and the second par for a second type.
+
+Ciphertexts that produce plaintext with padding of correct length
+(that is, a search for a zero in padding will be successful and its
+length will be longer than 8 bytes):
+
+* `no_header_with_payload`, for messages shorter than key_size - 10
+* `version_with_padding`, for messages shorter than key_size - 10
+* `type_with_padding`, for messages shorter than key_size - 10
+* `signature_type`, for messages shorter than key_size - 10
+* `signature_padding`, for messages shorter than key_size - 10
+* `valid`, for messages shorter than key_size - 10
+* `zero_byte_in_padding`, for messages shorter than key_size - 10 and
+  zero_byte position higher than 8
+* `valid_repeated_byte_payload`, for messages shorter than key_size - 10
+* `too_short_payload`, for messages shorter than key_size - 10 - padding_sub
+
+Ciphertexts that produce plaintext with padding of too short length
+(though see also "Padding byte separator" for ones where the search doesn't
+terminate on 0 byte):
+
+* `no_header_with_payload`, for messages longer than key_size - 10
+* `version_with_padding`, for messages longer than key_size - 10
+* `type_with_padding`, for messages longer than key_size - 10
+* `signature_type`, for messages longer than key_size - 10
+* `signature_padding`, for messages longer than key_size - 10
+* `no_padding`, though it depends on specifics of implementation
+* `valid`, for messages longer than key_size - 10
+* `zero_byte_in_padding`, for messages lenger than key_size - 10 and for
+  zero_byte positions lower or equal to 8
+* `valid_repeated_byte_payload`, for messages shorter than key_size - 10
+* `too_short_payload`, for messages longer than key_size - 10 - padding_sub
+
+For second type implementation, the ciphertexts that will have no zero bytes
+at any of the bytes between 3 and 10 (inclusive):
+
+* `no_structure`
+* `no_header_with_payload`, for messages shorter than key_size - 10
+* `version_only`
+* `version_with_padding`, for messages shorter than key_size - 10
+* `type_only`
+* `type_with_padding`, for messages shorter than key_size - 10
+* `signature_type`, for messages shorter than key_size - 10
+* `signature_padding`, for messages shorter than key_size - 10
+* `no_padding`, for messages longer or equal to than key_size - 2, though
+  there is a non-zero chance that it will have zero bytes, avoid this
+  ciphertext for this test
+* `header_only`
+* `valid`, for messages shorter than key_size - 10
+* `zero_byte_in_padding`, for messages shorter than key_size - 10 and
+  zero_byte position higher than 8
+* `valid_repeated_byte_payload`, for messages shorter than key_size - 10
+* `too_short_payload`, for messages shorter than key_size - 10 and padding
+  substraction equal 0 or 1
+
+Here, the two probes that are most likely to give consistent results are the
+`zero_byte_in_padding` with a reasonable messege length (<= 48 bytes) and
+zero_byte position between 0 and 8 inclusive. For positive test use
+`valid` with a message of same length.
+
+##### Message length check
+
+For checking if the library correctly tests the length of the message, or
+if the length of the message doesn't provide a side channel use
+one of the probes that allow setting length of the message:
+
+* `no_header_with_payload`
+* `version_with_padding`
+* `type_with_padding`
+* `signature_type`
+* `signature_padding`
+* `no_padding`
+* `valid`
+* `zero_byte_in_padding`
+* `valid_repeated_byte_payload`
+* `too_short_payload`
+
+The probe that is least likely to provide false signal is the `valid` one.
+You should test different lengths, from 0 (including 0) up to the max size
+supported by the key (key_length - 10), and at least few in between: typical
+sizes for symmetric key sizes: 16, 24, 32, 48, some that may cause buffer
+overflow: 1, 2, 4, as well as 128, 192, 256 (if supported by given key size).
+See also CVE-2012-5081.
+
+##### Custom structure
+
+In case the protocol requires specific structure of the encrypted message
+we can only suggest modifying the `step2.py` script to generate random
+messages that follow it.
+
+For TLS, which requires two first bytes of the message to equal the negotiated
+version you should use the
+[test-bleichenbacher-timing.py](https://github.com/tomato42/tlsfuzzer/blob/master/scripts/test-bleichenbacher-timing.py) script in tlsfuzzer.
+See [tlsfuzzer documenation](https://tlsfuzzer.readthedocs.io/en/latest/timing-analysis.html)
+for instructions how to execute it.
+
+##### Summary
+
+Given the above notes, we suggest running the following set of probes to
+look for side channels in the implementation:
+
+* `no_structure`
+* `no_padding` with message length 48
+* `signature_padding` with message length 0
+* `valid_repeated_byte_payload` with message 3 bytes shorter than key and
+  0x00 as message byte
+* `valid` with message length 48
+* `header_only`
+* `no_header_with_payload` with message length 48
+* `zero_byte_in_padding` with message length 48 and zero_byte of 4
+* `valid` with message length 0, 192, and key_length - 10
+* Optionally: also `valid` with message length 1, 2, 16, 32, and, 128
+
+In case the protocol you're testing requires specific message length, change
+the length from 48 to the required length and add the 48 to the last set of
+probes.
+
+So the commands you want to execute are:
+```
+./marvin-venv/bin/python ./step2.py -c rsa1024/cert.pem -o rsa1024_ciphertexts \
+no_structure no_padding=48 signature_padding=0 \
+valid_repeated_byte_payload="125 0xff" valid=48 header_only \
+no_header_with_payload=48 zero_byte_in_padding="48 4" \
+valid=0 valid=118
+./marvin-venv/bin/python ./step2.py -c rsa2048/cert.pem -o rsa2048_ciphertexts \
+no_structure no_padding=48 signature_padding=0 \
+valid_repeated_byte_payload="253 0xff" valid=48 header_only \
+no_header_with_payload=48 zero_byte_in_padding="48 4" \
+valid=0 valid=192 valid=246
+./marvin-venv/bin/python ./step2.py -c rsa4096/cert.pem -o rsa4096_ciphertexts \
+no_structure no_padding=48 signature_padding=0 \
+valid_repeated_byte_payload="509 0xff" valid=48 header_only \
+no_header_with_payload=48 zero_byte_in_padding="48 4" \
+valid=0 valid=192 valid=502
+```
+
+You'll find the ciphertexts in the `rsa1024_ciphertexts`,
+`rsa2048_ciphertexts`, and `rsa4096_ciphertexts` directories.
+
+Use other probes or other parameters when you find a timing signal and want
+to pin-point the likely incorrectly implemented check.
+
+For testing OAEP interface you should use the following ciphertexts:
+
+* `no_structure`
+* `valid` (any length)
+* `no_padding` with short message size (<= 48 bytes)
+* `signature_padding` with message length 0
+* `valid_repeated_byte_payload` with message 3 bytes shorter than key and
+  0x00 as message byte
 
 ### Writing the test harness
 
