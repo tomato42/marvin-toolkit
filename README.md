@@ -217,12 +217,12 @@ some exercise multiple.
 
 #### Selecting ciphertexts
 
+##### Plaintext bit size
+
 Step 1 will be mostly likely influenced by either the bit length of the
 decrypted value or the
 [Hamming weight](https://en.wikipedia.org/wiki/Hamming_weight) of the decrypted
 value—provided that correct blinding is used.
-
-##### Plaintext bit size
 
 Ciphertexts that generate plaintext with bigger than the expected bit
 length are:
@@ -450,7 +450,8 @@ messages that follow it.
 
 For TLS, which requires two first bytes of the message to equal the negotiated
 version you should use the
-[test-bleichenbacher-timing.py](https://github.com/tomato42/tlsfuzzer/blob/master/scripts/test-bleichenbacher-timing.py) script in tlsfuzzer.
+[test-bleichenbacher-timing.py](https://github.com/tomato42/tlsfuzzer/blob/master/scripts/test-bleichenbacher-timing.py)
+script in tlsfuzzer.
 See [tlsfuzzer documenation](https://tlsfuzzer.readthedocs.io/en/latest/timing-analysis.html)
 for instructions how to execute it.
 
@@ -575,8 +576,8 @@ intervals will converge to small enough values (<1ns or 1 CPU cycle) to
 confidently say "it's not possible to show presence of a timing side-channel".
 
 See
-[tlsfuzzer documenation](https://tlsfuzzer.readthedocs.io/en/latest/timing-analysis.html#environment-setup) if you want to prepare an especially quiet environment.
-
+[tlsfuzzer documenation](https://tlsfuzzer.readthedocs.io/en/latest/timing-analysis.html#environment-setup)
+if you want to prepare an especially quiet environment.
 
 ### Analysing the results
 
@@ -607,18 +608,19 @@ To say how big the possible side channel is, check the values for the
 worst pair of measurements. The median difference is the most robust
 estimator of it (together with its Confidence Interval), but is limited by the
 resolution of the clock used.
-If you see a median of 0s with a 95% CI of 0, then it's almost certain
+If you see a median of 0s with a 95% CI of 0, and you have used a clock with
+nanosecond precision then it's almost certain
 that there is no side-channel present.
 To decrease the CI by an order of magnitude (e.g. from 100ns to 10ns) you
 will need to execute a run with 100 times more observations (in general,
-the error falls with a square of sample size).
+the error falls with a square root of sample size).
 
 We found that the mean difference estimator is very slow to converge in case
 of noisy environmnet, we plan to change it to a better one soon
 (most likely to tri-mean or a truncated mean).
 
-See [tlsfuzzer documentation](https://tlsfuzzer.readthedocs.io/en/latest/timing-analysis.html#interpreting-the-results) on how to interpret the other results or generated
-graphs.
+See [tlsfuzzer documentation](https://tlsfuzzer.readthedocs.io/en/latest/timing-analysis.html#interpreting-the-results)
+on how to interpret the other results or the generated graphs.
 
 Note: the analysis is computationally intensive, for samples with tens of
 millions of observations it may take hours!
