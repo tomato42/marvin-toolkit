@@ -513,8 +513,56 @@ For testing OAEP interface use the following ciphertexts:
 
 ### Writing the test harness
 
-<!-- execute in tuples, in random order, write results to a csv with
-samples in columns -->
+The test harness should load the private key and the associated ciphertexts.
+
+It should try to decrypt each ciphertext in turn and measure the time it
+takes to decrypt given ciphertext.
+If the used API can throw exceptions, those should be caught and silently
+ignored.
+
+You should execute the ciphertexts in sets, in random order.
+This kind of execution should minimise the effect of systemic error and
+is necessary for validity of the following statistical analysis.
+
+Save the resulting execution times to a `timing.csv` file where each colum
+corresponds to collected times for a given ciphertext.
+You can use any unit (seconds, nanoseconds, clock ticks), but the
+subsequent analysis generates graphs expecting seconds so it's a good
+idea to normalise the values to seconds for readability.
+
+See following python pseudo-code for example:
+```python
+# put the probe you want as the reference point of analysis first
+ciphertexts = {"header_only": b"\x2f...",
+               "no_padding_48": b"\xbc...",
+               ...}
+
+names = list(ciphertexts.keys())
+times = {key: list() for key in names}
+
+for i in range(10000):
+    random.shuffle(names)
+    for id in names:
+        ciph = ciphertexts[id]
+        # be wary of rounding in clock APIs that return floating point numbers!
+        start_time = time.perf_counter_ns()
+        try:
+            # query the oracle
+            priv_key.decrypt(ciph)
+        except Exception:
+            pass
+        dec_time = time.perf_counter_ns() - start_time
+
+        # convert ns to s
+        dec_time = dec_time / 1.e9
+
+        times[id].append(dec_time)
+
+with open("timing.csv", "w") as f_out:
+    f_out.write(",".join(names)) + "\n")
+    for i in range(len(times[names[0]])):
+        f_out.write(",".join(str(times[name][i]) for name in names) + "\n")
+```
 
 ### Running the test
 
