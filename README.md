@@ -620,5 +620,5 @@ of noisy environmnet, we plan to change it to a better one soon
 See [tlsfuzzer documentation](https://tlsfuzzer.readthedocs.io/en/latest/timing-analysis.html#interpreting-the-results) on how to interpret the other results or generated
 graphs.
 
-Note: the analysis is computationally intensive, for samples with millions
-of observations it may take hours!
+Note: the analysis is computationally intensive, for samples with tens of
+millions of observations it may take hours!
