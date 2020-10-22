@@ -494,13 +494,15 @@ no_header_with_payload=48 zero_byte_in_padding="48 4" \
 valid=0 valid=192 valid=502
 ```
 
+Or run `step2.sh`.
+
 You'll find the ciphertexts in the `rsa1024_ciphertexts`,
 `rsa2048_ciphertexts`, and `rsa4096_ciphertexts` directories.
 
 Use other probes or other parameters when you find a timing signal and want
 to pin-point the likely incorrectly implemented check.
 
-For testing OAEP interface you should use the following ciphertexts:
+For testing OAEP interface use the following ciphertexts:
 
 * `no_structure`
 * `valid` (any length)
