@@ -45,15 +45,16 @@ If an attacker can measure precisely the decryption time of the RSA ciphertext
 of their choosing, we've shown decryption of ciphertexts possible in as
 little as 20 minutes.
 
-That decrypted secret may be used for for TLS session decryption, e-mail
-decryption or forging of signatures.
+This decryption process may be used for TLS session decryption (if the
+attacked session used RSA key exchange or if the session ticket is encrypted
+using RSA), e-mail decryption, etc. or forging of signatures.
 
 ## Who is affected?
 
 Any application that uses RSA decryption may be vulnerable.
 Protocols that use RSA encryption with PKCS#1 v1.5 padding are especially
 vulnerable.
-RSA OEAP defined in PKCS#1 v2.0 can also be implemented in a way that
+RSA OAEP defined in PKCS#1 v2.0 can also be implemented in a way that
 leaks enough information to mount a timing attack and decrypt the ciphertext
 or forge a signature.
 
@@ -61,38 +62,39 @@ or forge a signature.
 
 As an application programmer: stop using RSA encryption.
 If you're library vendor stop providing RSA PKCS#1 v1.5 decryption support.
-If possible, don't
-provide RSA OEAP decryption support either—while depadding is much easier
-to perform in side-channel free way, it depends on the previous RSA
-decryption step being constant time.
-That is, security of RSA OEAP requires big integer arithmetic that is
+If possible, don't provide RSA OEAP decryption support either—while depadding
+is much easier to perform in side-channel free way, it depends on the previous
+RSA decryption step being constant time.
+That is, security of RSA OAEP requires big integer arithmetic that is
 constant time.
 For example, gmplib does not provide high-level functions for side-channel
-free deblinding (multiplication modulo) while and OpenSSL BIGNUM doesn't
-provide a public interface to perform the de-blinding step and conversion to
-a byte string in side-channel free manner.
+free deblinding (multiplication modulo) and OpenSSL BIGNUM doesn't
+provide a consistent public interface to perform the de-blinding step and
+conversion to a byte string in side-channel free manner.
 
 If deprecation and later removal of the decryption support is not possible,
 document the API as known vulnerable.
 The users of such an API should be inspected to check if the timing signal
 is likely to leak to other processes, VMs or over the network.
 The last option being the most severe.
+Such applications will need to be fixed then.
 
 In case users of the API know a priori what's the expected size of the
 decrypted secret, providing an API that generates a random secret of that size
-and returns it in case of errors in padding is the recommended way to
-workaround this vulnerability. See the TLS 1.2 RFC 5246 page 58 for details.
+and returns it in case of errors in padding, instead of the decrypted value,
+is the recommended way to workaround this vulnerability. See the TLS 1.2 RFC
+5246 page 58 for details.
 
 ## Are signatures vulnerable?
 
 To the best of our knowledge APIs for performing RSA signatures,
 both RSA-PSS and RSA PKCS#1 v1.5, are not affected.
 Though please note that this assumes that the RSA implementation uses blinding
-when computing the signature.
+correctly when computing the signature.
 
 That being said, all Bleichenbacher-style attacks can be used to create an
 arbitrary signature using the key exposed through the vulnerable decryption
-API.
+oracle.
 
 ## How to test?
 
@@ -114,6 +116,10 @@ until tests show too small timing side channel to be possible.
 Once you've collected enough data you need to perform statistical tests
 to check for presence of the side-channel.
 
+For a programmer familiar with the decryption API and access to a modern
+Linux system we don't expect the preparation to take more than an hour.
+Execution of the tests may take multiple hours or days of machine time.
+
 This toolkit provides 3 tools:
 
 1. Script to generate the RSA keys
@@ -121,7 +127,7 @@ This toolkit provides 3 tools:
 3. Script to analyse the collected results
 
 They have been created with a tests running against a local API in mind.
-For a script testing the RSA key exchange in TLS see
+For a script testing the RSA key exchange in TLS see the
 [tlsfuzzer documentation](https://tlsfuzzer.readthedocs.io/en/latest/timing-analysis.html).
 
 ### Preparation
@@ -140,25 +146,27 @@ It will also create two more directories: `certgen` a bash library for
 generation of certificates and `tlsfuzzer` where the analysis script lives.
 
 It's safe to re-run the script, while it creates those directories it
-will not overwrite them or their contents.
+will not overwrite them or their contents. That also means, if you need to
+use newer version of tlsfuzzer, you will need to either update that
+git repo checkout or delete the directory and re run the script.
 
 ### Generating the certificates
 
 You can generate the certificates using the `step1.sh` script.
 It will create three directories: `rsa1024`, `rsa2048` and `rsa4096` with the
-key in 3 different formats: old OpenSSL, PKCS#8 and PKCS#12 (the password in
+key in 3 different formats: old OpenSSL, PKCS#8 and PKCS#12 (the password for
 PKCS#12 file is empty). Use whichever is easiest to work with with your
 application.
 It also generates self signed certificates signed with those keys, in case
 the key store requires associating a key with certificate for use.
 
-You need to pass the certificates to the script generating ciphertexts.
+You need to pass the certificates to the script generating the ciphertexts.
 
 There is nothing special about those keys, the script is provided only for
 convinience.
 
-CAUTION: if you regenerate certificates you MUST regenerate the ciphertexts
-or the test results will be meaningless.
+CAUTION: if you regenerate certificates (re-run the script) you MUST regenerate
+the ciphertexts or the test results will be meaningless.
 
 ### Generating the ciphertexts
 
