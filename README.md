@@ -455,7 +455,7 @@ for instructions how to execute it.
 ##### Summary
 
 Given the above notes, we suggest running the following set of probes to
-look for side channels in the implementation:
+look for side channels in an implementation:
 
 * `no_structure`
 * `no_padding` with message length 48
@@ -473,7 +473,7 @@ In case the protocol you're testing requires specific message length, change
 the length from 48 to the required length and add the 48 to the last set of
 probes.
 
-So the commands you want to execute are:
+Use the following commands to generate them for the previously generated keys:
 ```
 ./marvin-venv/bin/python ./step2.py -c rsa1024/cert.pem -o rsa1024_ciphertexts \
 no_structure no_padding=48 signature_padding=0 \
