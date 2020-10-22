@@ -566,10 +566,59 @@ with open("timing.csv", "w") as f_out:
 
 ### Running the test
 
-<!-- suggest following tlsfuzzer setup for the machine if the necessary
-sample size is large -->
+The test can be executed on any machine, the statistical analysis is
+constructed in a way that it will work correctly even with noisy data,
+processes running in the background, etc.
+
+That being said, the less noise, the quicker the values and confidence
+intervals will converge to small enough values (<1ns or 1 CPU cycle) to
+confidently say "it's not possible to show presence of a timing side-channel".
+
+See
+[tlsfuzzer documenation](https://tlsfuzzer.readthedocs.io/en/latest/timing-analysis.html#environment-setup) if you want to prepare an especially quiet environment.
+
 
 ### Analysing the results
 
-<!-- provide examples of clearly exploitable implementations and
-vulnerable implementations, explain what to look for -->
+As the analysis generates multiple files and graphs, we recommend putting the
+`timing.csv` into an empty directory.
+
+Execute the analysis using the following command:
+```
+PYTHONPATH=tlsfuzzer marvin-venv/bin/python tlsfuzzer/tlsfuzzer/analysis.py \
+-o path_to_dir_with_timing.csv/
+```
+
+The script will generate multiple files and graphs that describe the
+measured times.
+
+The most important file is the `report.txt` file, among other values is the
+result of the
+[Friedman test](https://en.wikipedia.org/wiki/Friedman_test) on collected
+samples.
+In case there is no detectable timing side channel for the given sample size,
+the p-value of it will be bigger than 0.05.
+If the value is smaller than that, then there's likely a side channel and
+run with larger sample size is recommended.
+If it reports p-value smaller than 1e-9, then it's almost certain that
+a timing side-channel exists.
+
+To say how big the possible side channel is, check the values for the
+worst pair of measurements. The median difference is the most robust
+estimator of it (together with its Confidence Interval), but is limited by the
+resolution of the clock used.
+If you see a median of 0s with a 95% CI of 0, then it's almost certain
+that there is no side-channel present.
+To decrease the CI by an order of magnitude (e.g. from 100ns to 10ns) you
+will need to execute a run with 100 times more observations (in general,
+the error falls with a square of sample size).
+
+We found that the mean difference estimator is very slow to converge in case
+of noisy environmnet, we plan to change it to a better one soon
+(most likely to tri-mean or a truncated mean).
+
+See [tlsfuzzer documentation](https://tlsfuzzer.readthedocs.io/en/latest/timing-analysis.html#interpreting-the-results) on how to interpret the other results or generated
+graphs.
+
+Note: the analysis is computationally intensive, for samples with millions
+of observations it may take hours!
