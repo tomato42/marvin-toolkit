@@ -14,7 +14,7 @@ A set of tools and instructions to check if a library is vulnerable to the Marvi
 Marvin attack is a continuation of work published by Hanno Böck, Juraj
 Somorovsky, and Craig Young in their ROBOT Attack[[1]](https://robotattack.org/).
 
-Version: 0.1
+Version: 0.1.1
 
 Primary contact: Hubert Kario (hkario@redhat.com)
 
@@ -45,9 +45,9 @@ This is where this toolkit comes in.
 
 ## How bad it is?
 
-If an attacker can measure precisely the decryption time of the RSA ciphertext
-of their choosing, we've shown decryption of ciphertexts possible in as
-little as 20 minutes.
+If an attacker can measure precisely the decryption times of RSA
+ciphertexts of their choosing, we've shown decryption of ciphertext possible
+in as little as 20 minutes under realistic conditions.
 
 This decryption process may be used for TLS session decryption (if the
 attacked session used RSA key exchange or if the session ticket is encrypted
