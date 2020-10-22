@@ -3,7 +3,7 @@
 This issue is currently embargoed. You're free to use the toolkit to find,
 fix bugs, and release new versions with the fixes. That is, we do not aim
 for coordinated disclosure.
-At the same time we'd like to ask you from discussing publicly the complete
+At the same time we'd like to ask you to refrain from discussing publicly the complete
 scope of the issue. That is, please
 talk publicly about "Fix for possible Bleichenbacher-style timing attack",
 not "Fix the exploitable Marvin attack of such-and-such magnitude".
@@ -27,9 +27,9 @@ alerts to differentiate ciphertexts but rather the time it takes the server
 or system under test to process the message.
 
 Use of non-constant time code, differences in memory accesses, explicit error
-handling, etc. All those things impact the time it takes the system under test
+handling, etc.—all those things impact the time it takes the system under test
 to process a ciphertext.
-That means that both the library providing the API needs to process the
+That means that the library providing the API needs to process the
 ciphertext in side-channel free manner, it needs to provide the error to the
 application in side-channel free manner, and the application using the API
 needs to process the error in side-channel free manner.
@@ -111,7 +111,7 @@ and the smaller the difference between different ciphertexts, the
 more observations are necessary to show that a library is vulnerable.
 In practice, for a local library call, with nanosecond precision timers,
 a collection of 100k to a 1M calls per ciphertext are sufficient to
-conclusively prove a volnerability.
+conclusively prove a vulnerability.
 For a fast library, collection of 10M calls may be enough to show that
 if the side channel exists, it's smaller than a single CPU cycle.
 For a slow one it make take 1B calls or more.
@@ -167,7 +167,7 @@ the key store requires associating a key with certificate for use.
 You need to pass the certificates to the script generating the ciphertexts.
 
 There is nothing special about those keys, the script is provided only for
-convinience.
+convenience.
 
 CAUTION: if you regenerate certificates (re-run the script) you MUST regenerate
 the ciphertexts or the test results will be meaningless.
@@ -358,7 +358,7 @@ For padding length check the implementation can use two algorithms:
    verify that all of them are non-zero (this is the correct approach)
 
 So below are two sets of ciphertexts, first pair for the first type of
-implementation and the second par for a second type.
+implementation and the second pair for a second type.
 
 Ciphertexts that produce plaintext with padding of correct length
 (that is, a search for a zero in padding will be successful and its
