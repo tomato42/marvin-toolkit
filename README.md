@@ -16,6 +16,8 @@ Somorovsky, and Craig Young in their ROBOT Attack[[1]](https://robotattack.org/)
 
 Version: 0.1
 
+Primary contact: Hubert Kario (hkario@redhat.com)
+
 ## The vulnerability
 
 Marvin is the extension of the same vulnerability described by Daniel
