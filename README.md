@@ -1,3 +1,13 @@
+# EMBARGOED ISSUE
+
+This issue is currently embargoed. You're free to use the toolkit to find,
+fix bugs, and release new versions with the fixes. That is, we do not aim
+for coordinated disclosure.
+At the same time we'd like to ask you from discussing publicly the complete
+scope of the issue. That is, please
+talk publicly about "Fix for possible Bleichenbacher-style timing attack",
+not "Fix the exploitable Marvin attack of such-and-such magnitude".
+
 # marvin-toolkit
 A set of tools and instructions to check if a library is vulnerable to the Marvin attack.
 
