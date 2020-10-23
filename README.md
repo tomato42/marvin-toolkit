@@ -3,7 +3,7 @@
 This issue is currently embargoed. You're free to use the toolkit to find,
 fix bugs, and release new versions with the fixes. That is, we do not aim
 for coordinated disclosure.
-At the same time we'd like to ask you from discussing publicly the complete
+At the same time we'd like to ask you to refrain from discussing publicly the complete
 scope of the issue. That is, please
 talk publicly about "Fix for possible Bleichenbacher-style timing attack",
 not "Fix the exploitable Marvin attack of such-and-such magnitude".
@@ -27,9 +27,9 @@ alerts to differentiate ciphertexts but rather the time it takes the server
 or system under test to process the message.
 
 Use of non-constant time code, differences in memory accesses, explicit error
-handling, etc. All those things impact the time it takes the system under test
+handling, etc.—all those things impact the time it takes the system under test
 to process a ciphertext.
-That means that both the library providing the API needs to process the
+That means that the library providing the API needs to process the
 ciphertext in side-channel free manner, it needs to provide the error to the
 application in side-channel free manner, and the application using the API
 needs to process the error in side-channel free manner.
@@ -167,7 +167,7 @@ the key store requires associating a key with certificate for use.
 You need to pass the certificates to the script generating the ciphertexts.
 
 There is nothing special about those keys, the script is provided only for
-convinience.
+convenience.
 
 CAUTION: if you regenerate certificates (re-run the script) you MUST regenerate
 the ciphertexts or the test results will be meaningless.
