@@ -81,7 +81,7 @@ document the API as known vulnerable.
 The users of such an API should be inspected to check if the timing signal
 is likely to leak to other processes, VMs or over the network.
 The last option being the most severe.
-Such applications will need to be fixed then.
+Such applications will need to be fixed.
 
 In case users of the API know a priori what's the expected size of the
 decrypted secret, providing an API that generates a random secret of that size
@@ -114,7 +114,7 @@ a collection of 100k to a 1M calls per ciphertext are sufficient to
 conclusively prove a vulnerability presence.
 For a fast library, measuring 10M calls may be enough to show that
 if the side channel exists, it's smaller than a single CPU cycle.
-For a slow one, it make take 1G calls or more.
+For a slow one, it may take 1G calls or more.
 As a rule of thumb, start with 100k and then increase by an order of magnitude
 until tests report that the small timing side channel becomes too small.
 Once you've collected enough data, you need to perform statistical tests
@@ -187,24 +187,24 @@ EM = 0x00 || 0x02 || PS || 0x00 || M
 ```
 
 Where `EM` stands for encrypted message, `PS` stands for padding string and
-`M` is the message for encryption, provided by user to the library.
+`M` is the message for encryption provided by user to the library.
 
 The first byte (0x00) is also called the version byte (though PKCS#1 v2.0
 didn't change it).
 The second byte (0x02) specifies the padding type, for signatures it's
 0x01 and the PS is a repeated 0xff byte. It can also be 0x00 to specify
-no padding, but then first byte of message must be non-zero.
+no padding, but then the first byte of the message must be non-zero.
 Padding bytes don't include bytes of size zero.
 
-The mininal size of PS is also specified at 8 bytes.
+The minimal size of PS is also specified at 8 bytes.
 
 Thus, a compliant implementation needs to:
 
 1. Perform RSA decryption, convert the integer into a string of bytes
-2. Check if first byte is 0
-3. Check if second bytes is 2
-4. Look for the zero byte separating padding string from message
-5. Check if the length of padding string is at least 8 bytes
+2. Check if the first byte is 0
+3. Check if the second byte is 2
+4. Look for the zero byte separating the padding string from the message
+5. Check if the length of the padding string is at least 8 bytes
 6. (Protocol specific) Check if the message has expected length
 7. (Protocol specific) Check if the message has specific structure
 8. (Protocol specific) In case any tests failed, use the previously generated
@@ -219,7 +219,7 @@ some exercise multiple.
 
 ##### Plaintext bit size
 
-Step 1 will be mostly likely influenced by either the bit length of the
+Step 1 will most likely be influenced by either the bit length of the
 decrypted value or the
 [Hamming weight](https://en.wikipedia.org/wiki/Hamming_weight) of the decrypted
 value—provided that the correct blinding is used.
@@ -251,7 +251,7 @@ Use small message sizes (<= 48) with `no_padding` for strongest signal.
 
 Ciphertexts that generate plaintext with high Hamming weight are:
 
-* `signature_padding` for message size small relative to key size (<= 48 bytes
+* `signature_padding` for small message size relative to key size (<= 48 bytes
   as a rule of thumb)
 * `valid_repeated_byte_payload` for long message sizes (>= key size/2) and
   a message byte with high Hamming weight (0xff, 0x7f, 0xbf, etc.)
@@ -345,7 +345,7 @@ message_size) of the plaintext):
 
 Which ciphertexts are interesting is highly dependent on the specific
 implementation. The `no_structure` and `header_only` are generally the best
-for negative test case, but for positive tests it's generally the `valid` and
+for negative test cases, but for positive tests it's generally the `valid` and
 `no_header_with_payload`, which are the most likely to result in an interesting
 timing signal.
 
