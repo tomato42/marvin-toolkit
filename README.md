@@ -65,16 +65,16 @@ or forge a signature.
 ## What's the recommended solution?
 
 As an application programmer: stop using RSA encryption.
-If you're library vendor stop providing RSA PKCS#1 v1.5 decryption support.
+If you're a library vendor: stop providing RSA PKCS#1 v1.5 decryption support.
 If possible, don't provide RSA OAEP decryption support either—while depadding
-is much easier to perform in side-channel free way, it depends on the previous
+is much easier to perform in a side-channel free way, it depends on the previous
 RSA decryption step being constant time.
 That is, security of RSA OAEP requires big integer arithmetic that is
 constant time.
 For example, gmplib does not provide high-level functions for side-channel
 free deblinding (multiplication modulo) and OpenSSL BIGNUM doesn't
 provide a consistent public interface to perform the de-blinding step and
-conversion to a byte string in side-channel free manner.
+conversion to a byte string in a side-channel free manner.
 
 If deprecation and later removal of the decryption support is not possible,
 document the API as known vulnerable.
@@ -92,7 +92,7 @@ is the recommended way to workaround this vulnerability. See the TLS 1.2 RFC
 ## Are signatures vulnerable?
 
 To the best of our knowledge APIs for performing RSA signatures,
-both RSA-PSS and RSA PKCS#1 v1.5, are not affected.
+both RSA-PSS and RSA PKCS#1 v1.5 are not affected.
 Though please note that this assumes that the RSA implementation uses blinding
 correctly when computing the signature.
 
@@ -102,66 +102,66 @@ oracle.
 
 ## How to test?
 
-To test a library or application you need to time how long the API call takes
+To test a library or application, you need to time how long the API call takes
 to process specific ciphertexts.
 You need to test the decryption times repeatedly to collect enough data
-for statistically significant result.
+for a statistically significant result.
 The longer the library takes to process the message with the ciphertext
-and the smaller the difference between different ciphertexts, the
+and the smaller the difference between different ciphertexts is, the
 more observations are necessary to show that a library is vulnerable.
 In practice, for a local library call, with nanosecond precision timers,
 a collection of 100k to a 1M calls per ciphertext are sufficient to
-conclusively prove a volnerability.
-For a fast library, collection of 10M calls may be enough to show that
+conclusively prove a vulnerability presence.
+For a fast library, measuring 10M calls may be enough to show that
 if the side channel exists, it's smaller than a single CPU cycle.
-For a slow one it make take 1B calls or more.
-As a rule of thumb start with 100k and then increase by an order of magnitude
-until tests show too small timing side channel to be possible.
-Once you've collected enough data you need to perform statistical tests
+For a slow one, it make take 1G calls or more.
+As a rule of thumb, start with 100k and then increase by an order of magnitude
+until tests report that the small timing side channel becomes too small.
+Once you've collected enough data, you need to perform statistical tests
 to check for presence of the side-channel.
 
 For a programmer familiar with the decryption API and access to a modern
-Linux system we don't expect the preparation to take more than an hour.
+Linux system, we don't expect the preparation to take more than an hour.
 Execution of the tests may take multiple hours or days of machine time.
 
 This toolkit provides 3 tools:
 
-1. Script to generate the RSA keys
-2. Script to generate the RSA ciphertexts with known plaintext structure
-3. Script to analyse the collected results
+1. A script to generate the RSA keys
+2. A script to generate the RSA ciphertexts with known plaintext structure
+3. A script to analyse the collected results
 
-They have been created with a tests running against a local API in mind.
-For a script testing the RSA key exchange in TLS see the
+They have been created with tests running against a local API in mind.
+For a script testing the RSA key exchange in TLS, see the
 [tlsfuzzer documentation](https://tlsfuzzer.readthedocs.io/en/latest/timing-analysis.html).
 
 ### Preparation
 
-The scripts here require modern version of Python (at least 3.7), but they
+The provided scripts require modern version of Python (at least 3.7), but they
 don't have to be executed on the same machine that executes the timing tests.
 
-To create the virtual environment and install the dependencies run the
+To create the virtual environment and install the dependencies, run the
 `step0.sh` script.
 
 This script will create a python virtual environment in `marvin-venv`
 directory and install all the necessary dependencies for the scripts
 to generate ciphertexts and analyse results.
 
-It will also create two more directories: `certgen` a bash library for
-generation of certificates and `tlsfuzzer` where the analysis script lives.
+It will also create two more directories: `certgen`—a bash library for
+generation of certificates—and `tlsfuzzer`, where the analysis script lives.
 
 It's safe to re-run the script, while it creates those directories it
 will not overwrite them or their contents. That also means, if you need to
 use newer version of tlsfuzzer, you will need to either update that
-git repo checkout or delete the directory and re run the script.
+git repo checkout or delete the directory and re-run the script.
 
 ### Generating the certificates
 
 You can generate the certificates using the `step1.sh` script.
 It will create three directories: `rsa1024`, `rsa2048` and `rsa4096` with the
 key in 3 different formats: old OpenSSL, PKCS#8 and PKCS#12 (the password for
-PKCS#12 file is empty). Use whichever is easiest to work with with your
+PKCS#12 file is empty). Use whichever one is the easiest to work with with your
 application.
-It also generates self signed certificates signed with those keys, in case
+It also generates self-signed certificates signed with those keys, in case
 the key store requires associating a key with certificate for use.
 
 You need to pass the certificates to the script generating the ciphertexts.
@@ -196,7 +196,7 @@ The second byte (0x02) specifies the padding type, for signatures it's
 no padding, but then first byte of message must be non-zero.
 Padding bytes don't include bytes of size zero.
 
-The miminal size of PS is also specified at 8 bytes.
+The mininal size of PS is also specified at 8 bytes.
 
 Thus, a compliant implementation needs to:
 
@@ -222,7 +222,7 @@ some exercise multiple.
 Step 1 will be mostly likely influenced by either the bit length of the
 decrypted value or the
 [Hamming weight](https://en.wikipedia.org/wiki/Hamming_weight) of the decrypted
-value—provided that correct blinding is used.
+value—provided that the correct blinding is used.
 
 Ciphertexts that generate plaintext with bigger than the expected bit
 length are:
@@ -245,7 +245,7 @@ length are:
 
 The most extreme of those (thus, most likely to show a timing-side channel)
 are the `no_structure` on the high end and the `no_padding` on the low end.
-Use small message sizes (<= 48) for the `no_padding` for strongest signal.
+Use small message sizes (<= 48) with `no_padding` for strongest signal.
 
 ##### Plaintext Hamming weight
 
@@ -254,14 +254,14 @@ Ciphertexts that generate plaintext with high Hamming weight are:
 * `signature_padding` for message size small relative to key size (<= 48 bytes
   as a rule of thumb)
 * `valid_repeated_byte_payload` for long message sizes (>= key size/2) and
-  a message byte with high hamming weight (0xff, 0x7f, 0xbf, etc.)
+  a message byte with high Hamming weight (0xff, 0x7f, 0xbf, etc.)
 
 Ciphertexts that generate plaintext with low Hamming weight are:
 
 * `no_padding` for small message sizes (<= key size/2)
-* `too_short_paylod` for large padding substractions (>= key size/2)
+* `too_short_payload` for large padding substractions (>= key size/2)
 * `valid_repeated_byte_payload` for long message sizes (>= key size/2) and
-  a message byte with low hamming weight (0x00, 0x01, 0x02, etc.)
+  a message byte with low Hamming weight (0x00, 0x01, 0x02, etc.)
 
 The most extreme of those are the `signature_padding` with zero-length message
 and `valid_repeated_byte_payload` for message size 3 bytes shorter than key
@@ -317,7 +317,7 @@ Ciphertexts that generate plaintext with valid type byte:
 * `too_short_payload`, for zero padding substraction
 
 There are two special values for the type byte, 0x01 and 0x02, so
-it's good idea to test `valid` for the positive case and both `no_structure`
+it's a good idea to test `valid` for the positive case and both `no_structure`
 and `signature_type` or `signature_padding`.
 
 ##### Padding byte separator
@@ -345,20 +345,21 @@ message_size) of the plaintext):
 
 Which ciphertexts are interesting is highly dependent on the specific
 implementation. The `no_structure` and `header_only` are generally the best
-for negative test case, but for positive tests generally the `valid` and
-`no_header_with_payload` are most likely to show interesting timing signal.
+for negative test case, but for positive tests it's generally the `valid` and
+`no_header_with_payload`, which are the most likely to result in an interesting
+timing signal.
 
 ##### Padding length check
 
-For padding length check the implementation can use two algorithms:
+For padding length check, the implementation can use two algorithms:
 
-1. look for first non zero byte, consider it a padding type, look for next
+1. Look for first non zero byte, consider it a padding type, look for next
    zero byte (this is incorrect)
 2. Decrypt the ciphertext, and look at bytes 3 to 10 (inclusive) of plaintext,
    verify that all of them are non-zero (this is the correct approach)
 
-So below are two sets of ciphertexts, first pair for the first type of
-implementation and the second par for a second type.
+So, below are two sets of ciphertexts, first pair is for the first type of
+implementation and the second pair is for the second.
 
 Ciphertexts that produce plaintext with padding of correct length
 (that is, a search for a zero in padding will be successful and its
@@ -387,12 +388,13 @@ terminate on 0 byte):
 * `no_padding`, though it depends on specifics of implementation
 * `valid`, for messages longer than key_size - 10
 * `zero_byte_in_padding`, for messages lenger than key_size - 10 and for
-  zero_byte positions lower or equal to 8
+  zero_byte positions lower than or equal to 8
 * `valid_repeated_byte_payload`, for messages shorter than key_size - 10
 * `too_short_payload`, for messages longer than key_size - 10 - padding_sub
 
-For second type implementation, the ciphertexts that will have no zero bytes
-at any of the bytes between 3 and 10 (inclusive):
+For an implementation of the second type,
+the ciphertexts that will have no zero bytes
+at any of the bytes between 3 and 10 (inclusive) are:
 
 * `no_structure`
 * `no_header_with_payload`, for messages shorter than key_size - 10
@@ -414,15 +416,15 @@ at any of the bytes between 3 and 10 (inclusive):
   substraction equal 0 or 1
 
 Here, the two probes that are most likely to give consistent results are the
-`zero_byte_in_padding` with a reasonable messege length (<= 48 bytes) and
-zero_byte position between 0 and 8 inclusive. For positive test use
+`zero_byte_in_padding` with a reasonable message length (<= 48 bytes) and
+zero_byte position between 0 and 8 inclusive. For positive tests, use
 `valid` with a message of same length.
 
 ##### Message length check
 
 For checking if the library correctly tests the length of the message, or
-if the length of the message doesn't provide a side channel use
-one of the probes that allow setting length of the message:
+if the length of the message doesn't provide a side channel, use
+one of the probes that allow setting the length of the message:
 
 * `no_header_with_payload`
 * `version_with_padding`
@@ -435,23 +437,23 @@ one of the probes that allow setting length of the message:
 * `valid_repeated_byte_payload`
 * `too_short_payload`
 
-The probe that is least likely to provide false signal is the `valid` one.
+The probe that is least likely to provide a false signal is the `valid` one.
 You should test different lengths, from 0 (including 0) up to the max size
-supported by the key (key_length - 10), and at least few in between: typical
+supported by the key (key_length - 10), and at least a few in between: typical
 sizes for symmetric key sizes: 16, 24, 32, 48, some that may cause buffer
 overflow: 1, 2, 4, as well as 128, 192, 256 (if supported by given key size).
 See also CVE-2012-5081.
 
 ##### Custom structure
 
-In case the protocol requires specific structure of the encrypted message
+In case the protocol requires specific structure of the encrypted message,
 we can only suggest modifying the `step2.py` script to generate random
 messages that follow it.
 
 For TLS, which requires two first bytes of the message to equal the negotiated
-version you should use the
+version, you should use the
 [test-bleichenbacher-timing.py](https://github.com/tomato42/tlsfuzzer/blob/master/scripts/test-bleichenbacher-timing.py)
-script in tlsfuzzer.
+script from tlsfuzzer.
 See [tlsfuzzer documenation](https://tlsfuzzer.readthedocs.io/en/latest/timing-analysis.html)
 for instructions how to execute it.
 
@@ -472,7 +474,7 @@ look for side channels in an implementation:
 * `valid` with message length 0, 192, and key_length - 10
 * Optionally: also `valid` with message length 1, 2, 16, 32, and, 128
 
-In case the protocol you're testing requires specific message length, change
+In case the protocol you're testing requires a specific message length, change
 the length from 48 to the required length and add the 48 to the last set of
 probes.
 
@@ -495,7 +497,7 @@ no_header_with_payload=48 zero_byte_in_padding="48 4" \
 valid=0 valid=192 valid=502
 ```
 
-Or run `step2.sh`.
+or run `step2.sh`.
 
 You'll find the ciphertexts in the `rsa1024_ciphertexts`,
 `rsa2048_ciphertexts`, and `rsa4096_ciphertexts` directories.
@@ -503,7 +505,7 @@ You'll find the ciphertexts in the `rsa1024_ciphertexts`,
 Use other probes or other parameters when you find a timing signal and want
 to pin-point the likely incorrectly implemented check.
 
-For testing OAEP interface use the following ciphertexts:
+For testing OAEP interface, use the following ciphertexts:
 
 * `no_structure`
 * `valid` (any length)
@@ -517,15 +519,15 @@ For testing OAEP interface use the following ciphertexts:
 The test harness should load the private key and the associated ciphertexts.
 
 It should try to decrypt each ciphertext in turn and measure the time it
-takes to decrypt given ciphertext.
+takes to decrypt the given ciphertext.
 If the used API can throw exceptions, those should be caught and silently
 ignored.
 
 You should execute the ciphertexts in sets, in random order.
-This kind of execution should minimise the effect of systemic error and
-is necessary for validity of the following statistical analysis.
+This kind of execution should minimize the effect of the systemic error and
+is necessary for the validity of the following statistical analysis.
 
-Save the resulting execution times to a `timing.csv` file where each colum
+Save the resulting execution times to a `timing.csv` file, where each column
 corresponds to collected times for a given ciphertext.
 You can use any unit (seconds, nanoseconds, clock ticks), but the
 subsequent analysis generates graphs expecting seconds so it's a good
@@ -581,8 +583,8 @@ if you want to prepare an especially quiet environment.
 
 ### Analysing the results
 
-As the analysis generates multiple files and graphs, we recommend putting the
-`timing.csv` into an empty directory.
+As the analysis generates multiple files and graphs, we recommend organizing
+different `timing.csv` files into different directories.
 
 Execute the analysis using the following command:
 ```
@@ -593,30 +595,30 @@ PYTHONPATH=tlsfuzzer marvin-venv/bin/python tlsfuzzer/tlsfuzzer/analysis.py \
 The script will generate multiple files and graphs that describe the
 measured times.
 
-The most important file is the `report.txt` file, among other values is the
-result of the
+The most important file is the `report.txt` file, containing,
+among other values, the result of the
 [Friedman test](https://en.wikipedia.org/wiki/Friedman_test) on collected
 samples.
 In case there is no detectable timing side channel for the given sample size,
 the p-value of it will be bigger than 0.05.
 If the value is smaller than that, then there's likely a side channel and
-run with larger sample size is recommended.
+re-runing with a larger sample size is recommended.
 If it reports p-value smaller than 1e-9, then it's almost certain that
 a timing side-channel exists.
 
-To say how big the possible side channel is, check the values for the
+To determine how big the possible side channel is, check the values for the
 worst pair of measurements. The median difference is the most robust
 estimator of it (together with its Confidence Interval), but is limited by the
 resolution of the clock used.
 If you see a median of 0s with a 95% CI of 0, and you have used a clock with
-nanosecond precision then it's almost certain
+nanosecond precision, then it's almost certain
 that there is no side-channel present.
-To decrease the CI by an order of magnitude (e.g. from 100ns to 10ns) you
+To decrease the CI by an order of magnitude (e.g. from 100ns to 10ns), you
 will need to execute a run with 100 times more observations (in general,
 the error falls with a square root of sample size).
 
 We found that the mean difference estimator is very slow to converge in case
-of noisy environmnet, we plan to change it to a better one soon
+of a noisy environment, we plan to change it to a better one soon
 (most likely to tri-mean or a truncated mean).
 
 See [tlsfuzzer documentation](https://tlsfuzzer.readthedocs.io/en/latest/timing-analysis.html#interpreting-the-results)
