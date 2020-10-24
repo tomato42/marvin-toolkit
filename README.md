@@ -557,6 +557,9 @@ for i in range(10000):
         dec_time = time.perf_counter_ns() - start_time
 
         # convert ns to s
+        # remember that single precision IEEE 754 floating point numbers provide
+        # only 7 decimal digits or precision, in general we need at least 9,
+        # i.e.: use "double" not "float" or "binary32"
         dec_time = dec_time / 1.e9
 
         times[id].append(dec_time)
