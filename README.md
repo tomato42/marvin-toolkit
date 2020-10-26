@@ -457,6 +457,55 @@ script from tlsfuzzer.
 See [tlsfuzzer documenation](https://tlsfuzzer.readthedocs.io/en/latest/timing-analysis.html)
 for instructions how to execute it.
 
+##### Verifying correctness of ciphertexts
+
+If you want to check if the encrypted values are indeed in the format
+described in the preceding paragraphs, you can use the OpenSSL command line
+tool:
+
+To check if the ciphertext is indeed valid PKCS#1 v1.5 ciphertext run
+(for example):
+```
+openssl rsautl -decrypt -pkcs -inkey rsa1024/key.pem \
+-in rsa1024_ciphertexts/valid_48 -hexdump
+```
+With the following output:
+```
+0000 - a9 39 19 2c a0 06 6f 88-25 b9 5d 1c 98 2a 7c 5c   .9.,..o.%.]..*|\
+0010 - 36 51 30 db 28 ed 5b 59-f9 4e 67 54 5f e5 07 1e   6Q0.(.[Y.NgT_...
+0020 - 50 14 6c b5 ab 87 14 e5-e1 8c b3 08 fe 64 0c 69   P.l..........d.i
+```
+
+When testing an invalid ciphertext:
+```
+openssl rsautl -decrypt -pkcs -inkey rsa1024/key.pem \
+-in rsa1024_ciphertexts/no_structure -hexdump
+```
+The output will look something like this:
+```
+140518003775296:error:0407109F:rsa routines:RSA_padding_check_PKCS1_type_2:pkcs decoding error:crypto/rsa/rsa_pk1.c:251:
+140518003775296:error:04065072:rsa routines:rsa_ossl_private_decrypt:padding check failed:crypto/rsa/rsa_ossl.c:549:
+```
+
+To verify that invalid ciphertexts have the specified strucute, use the `-raw`
+option:
+```
+openssl rsautl -decrypt -raw -inkey rsa1024/key.pem \
+-in rsa1024_ciphertexts/header_only -hexdump
+```
+That will produce output similar to this one:
+```
+0000 - 00 02 57 74 a6 34 62 59-41 21 56 36 13 3e d0 a3   ..Wt.4bYA!V6.>..
+0010 - e5 3e 6b 9a 1f 35 37 cf-9a 56 84 db 7f 89 a5 b5   .>k..57..V......
+0020 - f4 69 9a 8c e7 e9 a0 1f-27 ba f9 53 64 d9 64 21   .i......'..Sd.d!
+0030 - 75 60 83 07 1c 49 39 fa-8a 6e 72 35 be ef 02 e1   u`...I9..nr5....
+0040 - a3 dd 18 a8 09 79 45 3c-2a e0 23 12 d1 17 f5 62   .....yE<*.#....b
+0050 - 73 b0 88 55 2c 59 81 37-3c 69 56 bd c6 41 13 12   s..U,Y.7<iV..A..
+0060 - e8 ef 78 fa 12 93 0a 09-51 0a 94 12 40 93 eb 52   ..x.....Q...@..R
+0070 - 88 0f fd 25 3c 91 31 4e-a2 b7 c5 1c ea 1f 60 2c   ...%<.1N......`,
+```
+(note that there's only one 0x00 byte: the very first one)
+
 ##### Summary
 
 Given the above notes, we suggest running the following set of probes to
