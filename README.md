@@ -162,7 +162,7 @@ key in 3 different formats: old OpenSSL, PKCS#8 and PKCS#12 (the password for
 PKCS#12 file is empty). Use whichever one is the easiest to work with with your
 application.
 It also generates self-signed certificates signed with those keys, in case
-the key store requires associating a key with certificate for use.
+the key store requires associating a key with a certificate for use.
 
 You need to pass the certificates to the script generating the ciphertexts.
 
@@ -194,7 +194,7 @@ didn't change it).
 The second byte (0x02) specifies the padding type, for signatures it's
 0x01 and the PS is a repeated 0xff byte. It can also be 0x00 to specify
 no padding, but then the first byte of the message must be non-zero.
-Padding bytes don't include bytes of size zero.
+Padding bytes don't include bytes of value zero.
 
 The minimal size of PS is also specified at 8 bytes.
 
