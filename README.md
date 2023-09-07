@@ -1,20 +1,13 @@
-# EMBARGOED ISSUE
-
-This issue is currently embargoed. You're free to use the toolkit to find,
-fix bugs, and release new versions with the fixes. That is, we do not aim
-for coordinated disclosure.
-At the same time we'd like to ask you to refrain from discussing publicly the complete
-scope of the issue. That is, please
-talk publicly about "Fix for possible Bleichenbacher-style timing attack",
-not "Fix the exploitable Marvin attack of such-and-such magnitude".
-
 # marvin-toolkit
 A set of tools and instructions to check if a library is vulnerable to the Marvin attack.
 
 Marvin attack is a continuation of work published by Hanno Böck, Juraj
 Somorovsky, and Craig Young in their ROBOT Attack[[1]](https://robotattack.org/).
 
-Version: 0.1.1
+The main page about the attack is at
+[https://people.redhat.com/~hkario/marvin/](https://people.redhat.com/~hkario/marvin/)
+
+Version: 0.2.0
 
 Primary contact: Hubert Kario (hkario@redhat.com)
 
@@ -24,7 +17,7 @@ Marvin is the extension of the same vulnerability described by Daniel
 Bleichenbacher in 1998[[2]](https://link.springer.com/content/pdf/10.1007%2FBFb0055716.pdf)
 with the difference being that the used oracle doesn't use the TLS or SSL
 alerts to differentiate ciphertexts but rather the time it takes the server
-or system under test to process the message.
+or system under test to process the encrypted RSA message.
 
 Use of non-constant time code, differences in memory accesses, explicit error
 handling, etc.—all those things impact the time it takes the system under test
@@ -46,7 +39,8 @@ This is where this toolkit comes in.
 ## How bad it is?
 
 If an attacker can measure precisely the decryption times of RSA
-ciphertexts of their choosing, we've shown decryption of ciphertext possible
+ciphertexts of their choosing and the side-channel is large, we've shown
+decryption of ciphertext possible
 in as little as 20 minutes under realistic conditions.
 
 This decryption process may be used for TLS session decryption (if the
@@ -64,17 +58,19 @@ or forge a signature.
 
 ## What's the recommended solution?
 
-As an application programmer: stop using RSA encryption.
+As an application programmer: stop using RSA encryption with PKCS#1 v1.5
+padding.
 If you're a library vendor: stop providing RSA PKCS#1 v1.5 decryption support.
-If possible, don't provide RSA OAEP decryption support either—while depadding
-is much easier to perform in a side-channel free way, it depends on the previous
-RSA decryption step being constant time.
-That is, security of RSA OAEP requires big integer arithmetic that is
+If you do provide RSA OAEP decryption support, you should verify
+that it uses big integer arithmetic that is
 constant time.
-For example, gmplib does not provide high-level functions for side-channel
+For example, GNU MP does not provide high-level functions for side-channel
 free deblinding (multiplication modulo) and OpenSSL BIGNUM doesn't
 provide a consistent public interface to perform the de-blinding step and
-conversion to a byte string in a side-channel free manner.
+conversion to a byte string in a side-channel free manner
+(see the
+[complexity of the fix necessary](https://github.com/openssl/openssl/pull/20281)
+to do that using BIGNUM interface).
 
 If deprecation and later removal of the decryption support is not possible,
 document the API as known vulnerable.
@@ -88,6 +84,10 @@ decrypted secret, providing an API that generates a random secret of that size
 and returns it in case of errors in padding, instead of the decrypted value,
 is the recommended way to workaround this vulnerability. See the TLS 1.2 RFC
 5246 page 58 for details.
+
+If neither of those options are realistic, and you've already verified
+that the RSA-OAEP interface is side-channel free, you may consider implementing
+the workaround described in the Marvin Attack paper.
 
 ## Are signatures vulnerable?
 
@@ -103,22 +103,21 @@ oracle.
 ## How to test?
 
 To test a library or application, you need to time how long the API call takes
-to process specific ciphertexts.
+to process ciphertexts of specific form.
 You need to test the decryption times repeatedly to collect enough data
 for a statistically significant result.
 The longer the library takes to process the message with the ciphertext
-and the smaller the difference between different ciphertexts is, the
+and the smaller the side-channel is, the
 more observations are necessary to show that a library is vulnerable.
 In practice, for a local library call, with nanosecond precision timers,
 a collection of 100k to a 1M calls per ciphertext are sufficient to
-conclusively prove a vulnerability presence.
+conclusively prove a presence of a side-channel of just dozen nanoseconds.
 For a fast library, measuring 10M calls may be enough to show that
 if the side channel exists, it's smaller than a single CPU cycle.
-For a slow one, it may take 1G calls or more.
+For a slow one, with noisy execution, it may take 1G calls or more.
 As a rule of thumb, start with 100k and then increase by an order of magnitude
-until tests report that the small timing side channel becomes too small.
-Once you've collected enough data, you need to perform statistical tests
-to check for presence of the side-channel.
+until tests report that the measured confidence iterval becomes too small
+for the CPU on which the test was executed.
 
 For a programmer familiar with the decryption API and access to a modern
 Linux system, we don't expect the preparation to take more than an hour.
@@ -152,7 +151,7 @@ generation of certificates—and `tlsfuzzer`, where the analysis script lives.
 It's safe to re-run the script, while it creates those directories it
 will not overwrite them or their contents. That also means, if you need to
 use newer version of tlsfuzzer, you will need to either update that
-git repo checkout or delete the directory and re-run the script.
+git repo checkout manually or delete the directory and re-run the script.
 
 ### Generating the certificates
 
@@ -452,7 +451,7 @@ messages that follow it.
 
 For TLS, which requires two first bytes of the message to equal the negotiated
 version, you should use the
-[test-bleichenbacher-timing.py](https://github.com/tomato42/tlsfuzzer/blob/master/scripts/test-bleichenbacher-timing.py)
+[test-bleichenbacher-timing-pregenerate.py](https://github.com/tlsfuzzer/tlsfuzzer/blob/master/scripts/test-bleichenbacher-timing-pregenerate.py)
 script from tlsfuzzer.
 See [tlsfuzzer documenation](https://tlsfuzzer.readthedocs.io/en/latest/timing-analysis.html)
 for instructions how to execute it.
@@ -573,8 +572,18 @@ If the used API can throw exceptions, those should be caught and silently
 ignored.
 
 You should execute the ciphertexts in sets, in random order.
-This kind of execution should minimize the effect of the systemic error and
+The harness itself should be side-channel free (for example, the
+memory location of the ciphertext must not be correlated with the plaintex).
+This kind of execution will minimize the effect of the systemic error and
 is necessary for the validity of the following statistical analysis.
+
+The easiest way to have a side-channel free harness, is to split it to two
+parts: one part which writes the ciphertexts to be processed to a file
+in random order (saving the order in which they are processed) and
+the second part which blindly reads those ciphertexts from a file and
+processes them in order (remember that ciphertexts are the same size
+as the RSA modulus, and APIs must accept zero padded ciphertexts, so
+each ciphertext is the exact same size).
 
 Save the resulting execution times to a `timing.csv` file, where each column
 corresponds to collected times for a given ciphertext.
@@ -582,7 +591,14 @@ You can use any unit (seconds, nanoseconds, clock ticks), but the
 subsequent analysis generates graphs expecting seconds so it's a good
 idea to normalise the values to seconds for readability.
 
-See following python pseudo-code for example:
+Alternatively you can dump raw values read from a constantly ticking clock
+source (like TSC in any modern x86\_64 cpu) and then use the
+``--binary`` together with ``--clock-frequency`` option of ``extract.py``.
+As that is usually easier to do in side-channel free manner, it's the
+recommended approach.
+
+See following python pseudo-code for the principle of operation, but
+with non side-channel free harness:
 ```python
 # put the probe you want as the reference point of analysis first
 ciphertexts = {"header_only": b"\x2f...",
@@ -618,6 +634,11 @@ with open("timing.csv", "w") as f_out:
     for i in range(len(times[names[0]])):
         f_out.write(",".join(str(times[name][i]) for name in names) + "\n")
 ```
+
+See the
+[test-bleichenbacher-timing-pregenerate.py](https://github.com/tlsfuzzer/tlsfuzzer/blob/master/scripts/test-bleichenbacher-timing-pregenerate.py)
+for an example script that first generates random ciphertexts and then
+reads them from a file.
 
 ### Running the test
 
@@ -663,18 +684,48 @@ worst pair of measurements. The median difference is the most robust
 estimator of it (together with its Confidence Interval), but is limited by the
 resolution of the clock used.
 If you see a median of 0s with a 95% CI of 0, and you have used a clock with
-nanosecond precision, then it's almost certain
+nanosecond precision or better, then it's almost certain
 that there is no side-channel present.
+If your clock source is ticking at significantly lower frequency than the
+CPU frequency
+(common on the ARM platform), then looking at trimmed mean is generally a
+good idea. Its interpretation is the same as the median, but it will be able
+to interpolate the size of side-channels smaller than the clock tick.
+
 To decrease the CI by an order of magnitude (e.g. from 100ns to 10ns), you
 will need to execute a run with 100 times more observations (in general,
-the error falls with a square root of sample size).
+the measurement error falls with a square root of sample size).
 
-We found that the mean difference estimator is very slow to converge in case
-of a noisy environment, we plan to change it to a better one soon
-(most likely to tri-mean or a truncated mean).
+We found that the mean of differences estimator is very slow to converge in case
+of a noisy environment.
 
 See [tlsfuzzer documentation](https://tlsfuzzer.readthedocs.io/en/latest/timing-analysis.html#interpreting-the-results)
 on how to interpret the other results or the generated graphs.
 
 Note: the analysis is computationally intensive, for samples with tens of
 millions of observations it may take hours!
+It is also implemented to use multiple CPU cores efficiently, but that
+increases the memory usage significantly (for a machine with 128 CPU cores
+analysing 36 samples, 10 million observations each, you will need around
+128 GB of RAM).
+You can limit parallelizm by using ``--workers`` command line option.
+
+#### False positives
+
+If your test harness is constant time, and you've tested the individual
+ciphertexts in random order, then there's still one place where a false
+positive signal may come from: processing the _ciphertext_ value.
+
+If the numerical library is not constant time, then multiplying the same
+ciphertext over and over may provide enough of a signal to differentiate it
+from some other ciphertext with a slightly different structure, even
+if they decrypt to functionally identical plaintext.
+
+The way around it is to use random ciphertexts that decrypt to
+functionally identical plaintexts (i.e. if we're testing how an implemntation
+handles a zero byte at 5th byte of the plaintext, values of the rest of
+``PS`` or message don't matter, they can be random for every decryption)
+for each and every decryption.
+See
+[test-bleichenbacher-timing-pregenerate.py](https://github.com/tlsfuzzer/tlsfuzzer/blob/master/scripts/test-bleichenbacher-timing-pregenerate.py)
+for a practical example of a script that does that.
