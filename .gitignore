@@ -10,3 +10,4 @@ rsa2048_ciphertexts
 rsa4096
 rsa4096_repeat
 rsa4096_ciphertexts
+example/openssl/time_decrypt_legacy
