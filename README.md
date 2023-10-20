@@ -7,7 +7,7 @@ Somorovsky, and Craig Young in their ROBOT Attack[[1]](https://robotattack.org/)
 The main page about the attack is at
 [https://people.redhat.com/~hkario/marvin/](https://people.redhat.com/~hkario/marvin/)
 
-Version: 0.2.0
+Version: 0.3.0
 
 Primary contact: Hubert Kario (hkario@redhat.com)
 
@@ -82,8 +82,14 @@ Such applications will need to be fixed.
 In case users of the API know a priori what's the expected size of the
 decrypted secret, providing an API that generates a random secret of that size
 and returns it in case of errors in padding, instead of the decrypted value,
-is the recommended way to workaround this vulnerability. See the TLS 1.2 RFC
-5246 page 58 for details.
+is the recommended way to workaround this vulnerability.
+Do note that this works _only_ for online protocols like TLS, as the
+returned random value is mixed with the ServerHello.random value, so a
+constant result from decryption (in case padding is PKCS#1 v1.5 conforming)
+and a random, but same sized, output can behave the same.
+See the TLS 1.2 RFC 5246 page 58 for details.
+It _will not_ work for cases such like S/MIME (CMS), JSON Web Tokens, XML
+encryption, etc.
 
 If neither of those options are realistic, and you've already verified
 that the RSA-OAEP interface is side-channel free, you may consider implementing
@@ -125,7 +131,7 @@ Execution of the tests may take multiple hours or days of machine time.
 
 This toolkit provides 3 tools:
 
-1. A script to generate the RSA keys
+1. A script to generate the RSA keys (in multiple formats)
 2. A script to generate the RSA ciphertexts with known plaintext structure
 3. A script to analyse the collected results
 
@@ -486,7 +492,7 @@ The output will look something like this:
 140518003775296:error:04065072:rsa routines:rsa_ossl_private_decrypt:padding check failed:crypto/rsa/rsa_ossl.c:549:
 ```
 
-To verify that invalid ciphertexts have the specified strucute, use the `-raw`
+To verify that invalid ciphertexts have the specified structure, use the `-raw`
 option:
 ```
 openssl rsautl -decrypt -raw -inkey rsa1024/key.pem \
@@ -552,6 +558,15 @@ You'll find the ciphertexts in the `rsa1024_ciphertexts`,
 
 Use other probes or other parameters when you find a timing signal and want
 to pin-point the likely incorrectly implemented check.
+
+To make it easier to process the ciphertext in random order, in way that the
+test harness doesn't contribute to the side-channel, you can alternatively
+execute the `step2-alt.sh`.
+
+Or add the command line options `--repeat 100000 --verbose` before the `-c`
+option. This will generate a single `ciphers.bin` that is a concatenation
+of ciphertexts in random order. The order of them is saved in `log.csv`
+file.
 
 For testing OAEP interface, use the following ciphertexts:
 
@@ -729,3 +744,4 @@ for each and every decryption.
 See
 [test-bleichenbacher-timing-pregenerate.py](https://github.com/tlsfuzzer/tlsfuzzer/blob/master/scripts/test-bleichenbacher-timing-pregenerate.py)
 for a practical example of a script that does that.
+Or use the `--repeat` option with the `./step2.py` script.

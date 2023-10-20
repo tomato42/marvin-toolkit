@@ -4,8 +4,11 @@ import sys
 import random
 import getopt
 import os
+from threading import Thread, Event
 from tlslite.x509 import X509
 from tlslite.utils.cryptomath import divceil
+from tlsfuzzer.utils.log import Log
+from tlsfuzzer.utils.progress_report import progress_report
 
 
 if sys.version_info < (3, 7):
@@ -283,11 +286,17 @@ def help_msg():
 Generate ciphertexts for testing RSA decryption interface against
 timing side-channel.
 
--c cert.pem   Path to PEM-encoded X.509 certificate
--o dir        Directory that will include the have the generated ciphertexts.
-              "ciphertexts" by default.
---help        This message
+-c cert.pem      Path to PEM-encoded X.509 certificate
+-o dir           Directory that will contain the generated ciphertexts.
+                 "ciphertexts" by default.
 --describe=name  Describe the specified probe
+--repeat=num     Save the ciphertexts in random order in a single file
+                 (ciphers.bin) in the specified directory together with a
+                 file specifying the order (log.csv). Used for generating
+                 input file for timing tests.
+--force          Don't abort when the output dir exists
+--verbose        Print status progress when generating repeated probes
+--help           This message
 
 Supported probes:
 {1}
@@ -295,50 +304,7 @@ Supported probes:
     i, j) for i, j in CiphertextGenerator.types.items())))
 
 
-if __name__ == '__main__':
-    cert = None
-    out_dir = "ciphertexts"
-
-    argv = sys.argv[1:]
-    opts, args = getopt.getopt(argv, "c:o:", ["help", "describe="])
-    for opt, arg in opts:
-        if opt == "-c":
-            cert = arg
-        elif opt == "-o":
-            out_dir = arg
-        elif opt == "--help":
-            help_msg()
-            sys.exit(0)
-        elif opt == "--describe":
-            try:
-                fun = getattr(CiphertextGenerator, arg)
-            except Exception:
-                help_msg()
-                raise ValueError("No ciphertext named {0}".format(arg))
-            print("{0}:".format(arg))
-            print(fun.__doc__)
-            sys.exit(0)
-        else:
-            raise ValueError("Unrecognised option: {0}".format(opt))
-
-    if not args:
-        print("ERROR: No ciphertexts specified", file=sys.stderr)
-        sys.exit(1)
-
-    if not cert:
-        print("ERROR: No certificate specified", file=sys.stderr)
-        sys.exit(1)
-
-    pub = get_key(cert)
-
-    print("working with {0}bit keys".format(len(pub)))
-    print("Will save ciphertexts to {0}".format(out_dir))
-
-    try:
-        os.mkdir(out_dir)
-    except FileExistsError:
-        pass
-
+def single_shot(out_dir, pub, args):
     generator = CiphertextGenerator(pub)
 
     for arg in args:
@@ -366,3 +332,153 @@ if __name__ == '__main__':
 
         with open(os.path.join(out_dir, file_name), "wb") as out_file:
             out_file.write(ciphertext)
+
+
+def gen_timing_probes(out_dir, pub, args, repeat, verbose=False):
+    generator = CiphertextGenerator(pub)
+
+    probes = {}
+    probe_names = []
+
+    # parse the parameters
+    for arg in args:
+        ret = arg.split('=')
+        if len(ret) == 1:
+            name = ret[0]
+            params = []
+        elif len(ret) == 2:
+            name, params = ret
+            ret = params.split(' ')
+            params = [int(i, 16) if i[:2] == '0x' else int(i) for i in ret]
+        else:
+            print("ERROR: Incorrect formatting of option: {0}".format(arg))
+
+        if len(params) != generator.types[name]:
+            print("ERROR: Incorrect number of parameters specified for probe "
+                  "{0}, expected: {1}, got {2}".format(
+                      name, generator.types[name], len(params)),
+                  file=sys.stderr)
+            sys.exit(1)
+
+
+        method = getattr(generator, name)
+
+        probe_name = "_".join([name] + [str(i) for i in params])
+
+        if probe_name in probes:
+            print("ERROR: duplicate probe name and/or parameters: {0}, {1}"
+                  .format(name, params))
+            sys.exit(1)
+
+        probes[probe_name] = (method, params)
+        probe_names.append(probe_name)
+
+    # create an order in which we will write the ciphertexts in
+    log = Log(os.path.join(out_dir, "log.csv"))
+
+    log.start_log(probes.keys())
+
+    for _ in range(repeat):
+        log.shuffle_new_run()
+
+    log.write()
+
+    # reset the log position
+    log.read_log()
+
+    try:
+        # start progress reporting
+        status = [0, len(probe_names) * repeat, Event()]
+        if verbose:
+            kwargs = {}
+            kwargs['unit'] = ' ciphertext'
+            kwargs['delay'] = 2
+            progress = Thread(target=progress_report, args=(status,),
+                              kwargs=kwargs)
+            progress.start()
+
+        with open(os.path.join(out_dir, "ciphers.bin"), "wb") as out:
+            # start the ciphertext generation
+            for executed, index in enumerate(log.iterate_log()):
+                status[0] = executed
+
+                p_name = probe_names[index]
+                p_method, p_params = probes[p_name]
+
+                ciphertext = p_method(*p_params)
+
+                out.write(ciphertext)
+    finally:
+        if verbose:
+            status[2].set()
+            progress.join()
+            print()
+
+    print("done")
+
+
+if __name__ == '__main__':
+    cert = None
+    out_dir = "ciphertexts"
+    repeat = None
+    force_dir = False
+    verbose = False
+
+    argv = sys.argv[1:]
+    opts, args = getopt.getopt(argv, "c:o:", ["help", "describe=", "repeat=",
+                                              "force", "verbose"])
+    for opt, arg in opts:
+        if opt == "-c":
+            cert = arg
+        elif opt == "-o":
+            out_dir = arg
+        elif opt == "--help":
+            help_msg()
+            sys.exit(0)
+        elif opt == "--force":
+            force_dir = True
+        elif opt == "--repeat":
+            repeat = int(arg)
+        elif opt == "--verbose":
+            verbose = True
+        elif opt == "--describe":
+            try:
+                fun = getattr(CiphertextGenerator, arg)
+            except Exception:
+                help_msg()
+                raise ValueError("No ciphertext named {0}".format(arg))
+            print("{0}:".format(arg))
+            print(fun.__doc__)
+            sys.exit(0)
+        else:
+            raise ValueError("Unrecognised option: {0}".format(opt))
+
+    if not args:
+        print("ERROR: No ciphertexts specified", file=sys.stderr)
+        sys.exit(1)
+
+    if not cert:
+        print("ERROR: No certificate specified", file=sys.stderr)
+        sys.exit(1)
+
+    if repeat is not None and repeat <= 0:
+        print("ERROR: repeat must be a positive integer", file=sys.stder)
+        sys.exit(1)
+
+    pub = get_key(cert)
+
+    print("working with {0}bit key".format(len(pub)))
+    print("Will save ciphertexts to {0}".format(out_dir))
+
+    try:
+        os.mkdir(out_dir)
+    except FileExistsError:
+        if force_dir:
+            pass
+        else:
+            raise
+
+    if repeat is None:
+        single_shot(out_dir, pub, args)
+    else:
+        gen_timing_probes(out_dir, pub, args, repeat, verbose)

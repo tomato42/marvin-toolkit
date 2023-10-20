@@ -24,7 +24,7 @@ if ! [[ -d marvin-venv ]]; then
 fi
 
 if ! [[ -d tlsfuzzer ]]; then
-    git clone https://github.com/tomato42/tlsfuzzer.git
+    git clone --depth=1 https://github.com/tomato42/tlsfuzzer.git
 else
     echo "Info: tlsfuzzer detected, not upgrading"
 fi
@@ -34,7 +34,7 @@ pushd tlsfuzzer
 popd
 
 if ! [[ -d certgen ]]; then
-    git clone https://github.com/redhat-qe-security/certgen.git
+    git clone --depth=1 https://github.com/redhat-qe-security/certgen.git
 else
     echo "Info: certgen detected, not upgrading"
 fi

@@ -2,8 +2,11 @@ tlsfuzzer
 marvin-venv
 certgen
 rsa1024
+rsa1024_repeat
 rsa1024_ciphertexts
 rsa2048
+rsa2048_repeat
 rsa2048_ciphertexts
 rsa4096
+rsa4096_repeat
 rsa4096_ciphertexts
