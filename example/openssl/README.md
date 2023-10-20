@@ -45,8 +45,8 @@ PYTHONPATH=tlsfuzzer marvin-venv/bin/python3 tlsfuzzer/tlsfuzzer/analysis.py \
 -o rsa2048_repeat/ --verbose
 ```
 
-Detailed information about produced output is available in (tlsfuzzer
-documentation)[https://tlsfuzzer.readthedocs.io/en/latest/timing-analysis.html]
+Detailed information about produced output is available in
+(tlsfuzzer documentation)[https://tlsfuzzer.readthedocs.io/en/latest/timing-analysis.html]
 but what's most important is in the summary:
 ```
 Sign test mean p-value: 0.5538, median p-value: 0.562, min p-value: 0.06575
