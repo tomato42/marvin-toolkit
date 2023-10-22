@@ -6,7 +6,7 @@ PYTHONPATH=tlsfuzzer ./marvin-venv/bin/python ./step2.py \
 no_structure valid=0 \
 too_short_payload="0 1" too_short_payload="0 3" too_short_payload="0 7" \
 too_short_payload="0 15" \
-no_padding=48 signature_padding=0 \
+no_padding=48 signature_padding=8 \
 valid_repeated_byte_payload="117 0x00"
 
 PYTHONPATH=tlsfuzzer ./marvin-venv/bin/python ./step2.py \
@@ -15,7 +15,7 @@ PYTHONPATH=tlsfuzzer ./marvin-venv/bin/python ./step2.py \
 no_structure valid=0 \
 too_short_payload="0 1" too_short_payload="0 3" too_short_payload="0 7" \
 too_short_payload="0 15" \
-no_padding=48 signature_padding=0 \
+no_padding=48 signature_padding=8 \
 valid_repeated_byte_payload="245 0x00"
 
 PYTHONPATH=tlsfuzzer ./marvin-venv/bin/python ./step2.py \
@@ -24,5 +24,5 @@ PYTHONPATH=tlsfuzzer ./marvin-venv/bin/python ./step2.py \
 no_structure valid=0 \
 too_short_payload="0 1" too_short_payload="0 3" too_short_payload="0 7" \
 too_short_payload="0 15" \
-no_padding=48 signature_padding=0 \
+no_padding=48 signature_padding=8 \
 valid_repeated_byte_payload="501 0x00"

@@ -7,7 +7,7 @@ Somorovsky, and Craig Young in their ROBOT Attack[[1]](https://robotattack.org/)
 The main page about the attack is at
 [https://people.redhat.com/~hkario/marvin/](https://people.redhat.com/~hkario/marvin/)
 
-Version: 0.3.1
+Version: 0.3.2
 
 Primary contact: Hubert Kario (hkario@redhat.com)
 
@@ -518,15 +518,17 @@ look for side channels in an implementation:
 
 * `no_structure`
 * `no_padding` with message length 48
-* `signature_padding` with message length 0
-* `valid_repeated_byte_payload` with message 3 bytes shorter than key and
+* `signature_padding` with message length 8
+* `valid_repeated_byte_payload` with message 10 bytes shorter than key and
   0x00 as message byte
 * `valid` with message length 48
 * `header_only`
 * `no_header_with_payload` with message length 48
 * `zero_byte_in_padding` with message length 48 and zero_byte of 4
 * `valid` with message length 0, 192, and key_length - 10
-* Optionally: also `valid` with message length 1, 2, 16, 32, and, 128
+* Optionally: also `valid` with message length 1, 2, 16, 32, and 128
+* Optionally: `too_short_payload` with padding too short by 1, 3, 7, and 15
+  bytes
 
 In case the protocol you're testing requires a specific message length, change
 the length from 48 to the required length and add the 48 to the last set of
@@ -534,19 +536,22 @@ probes.
 
 Use the following commands to generate them for the previously generated keys:
 ```
-./marvin-venv/bin/python ./step2.py -c rsa1024/cert.pem -o rsa1024_ciphertexts \
-no_structure no_padding=48 signature_padding=0 \
-valid_repeated_byte_payload="125 0xff" valid=48 header_only \
+PYTHONPATH=tlsfuzzer ./marvin-venv/bin/python ./step2.py \
+-c rsa1024/cert.pem -o rsa1024_ciphertexts \
+no_structure no_padding=48 signature_padding=8 \
+valid_repeated_byte_payload="118 0xff" valid=48 header_only \
 no_header_with_payload=48 zero_byte_in_padding="48 4" \
 valid=0 valid=118
-./marvin-venv/bin/python ./step2.py -c rsa2048/cert.pem -o rsa2048_ciphertexts \
-no_structure no_padding=48 signature_padding=0 \
-valid_repeated_byte_payload="253 0xff" valid=48 header_only \
+PYTHONPATH=tlsfuzzer ./marvin-venv/bin/python ./step2.py \
+-c rsa2048/cert.pem -o rsa2048_ciphertexts \
+no_structure no_padding=48 signature_padding=8 \
+valid_repeated_byte_payload="246 0xff" valid=48 header_only \
 no_header_with_payload=48 zero_byte_in_padding="48 4" \
 valid=0 valid=192 valid=246
-./marvin-venv/bin/python ./step2.py -c rsa4096/cert.pem -o rsa4096_ciphertexts \
-no_structure no_padding=48 signature_padding=0 \
-valid_repeated_byte_payload="509 0xff" valid=48 header_only \
+PYTHONPATH=tlsfuzzer ./marvin-venv/bin/python ./step2.py \
+-c rsa4096/cert.pem -o rsa4096_ciphertexts \
+no_structure no_padding=48 signature_padding=8 \
+valid_repeated_byte_payload="502 0xff" valid=48 header_only \
 no_header_with_payload=48 zero_byte_in_padding="48 4" \
 valid=0 valid=192 valid=502
 ```
@@ -575,7 +580,7 @@ For testing OAEP interface, use the following ciphertexts:
 * `too_short_payload` with message size 0 and padding shorter by 1, 3, 7, and
   15 bytes
 * `no_padding` with short message size (<= 48 bytes)
-* `signature_padding` with message length 0
+* `signature_padding` with message length 8
 * `valid_repeated_byte_payload` with message 11 bytes shorter than key and
   0x00 as message byte
 
