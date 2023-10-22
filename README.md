@@ -7,7 +7,7 @@ Somorovsky, and Craig Young in their ROBOT Attack[[1]](https://robotattack.org/)
 The main page about the attack is at
 [https://people.redhat.com/~hkario/marvin/](https://people.redhat.com/~hkario/marvin/)
 
-Version: 0.3.0
+Version: 0.3.1
 
 Primary contact: Hubert Kario (hkario@redhat.com)
 
@@ -572,10 +572,14 @@ For testing OAEP interface, use the following ciphertexts:
 
 * `no_structure`
 * `valid` (any length)
+* `too_short_payload` with message size 0 and padding shorter by 1, 3, 7, and
+  15 bytes
 * `no_padding` with short message size (<= 48 bytes)
 * `signature_padding` with message length 0
-* `valid_repeated_byte_payload` with message 3 bytes shorter than key and
+* `valid_repeated_byte_payload` with message 11 bytes shorter than key and
   0x00 as message byte
+
+Or run the `step2-oaep-alt.sh` script.
 
 ### Writing the test harness
 

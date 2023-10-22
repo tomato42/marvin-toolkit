@@ -4,10 +4,13 @@ certgen
 rsa1024
 rsa1024_repeat
 rsa1024_ciphertexts
+rsa1024_oaep_repeat
 rsa2048
 rsa2048_repeat
 rsa2048_ciphertexts
+rsa2048_oaep_repeat
 rsa4096
 rsa4096_repeat
 rsa4096_ciphertexts
+rsa4096_oaep_repeat
 example/openssl/time_decrypt_legacy
