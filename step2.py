@@ -161,7 +161,7 @@ class CiphertextGenerator(object):
         """
         Creates a PKCS#1 v1.5 plaintext with correct first byte (0x00),
         incorrect type byte (0x01 - used for signature padding), padding
-        typical for signatures (0xFF bytes) and random paylod of specified
+        typical for signatures (0xFF bytes) and random payload of specified
         length.
         """
         if m_length > self.key_size - 3:
@@ -206,7 +206,10 @@ class CiphertextGenerator(object):
     def valid(self, m_length):
         """
         Create a random, valid PKCS#1 v1.5 plaintext with payload
-        of specified length
+        of specified length.
+
+        Doesn't check if the message size will allow
+        for the minimum of 8 byte padding!
         """
         if m_length > self.key_size - 3:
             raise ValueError("Too big message size, max size: {0}".format(
@@ -244,7 +247,10 @@ class CiphertextGenerator(object):
     def valid_repeated_byte_payload(self, m_length, payload_byte):
         """
         Create a random, valid PKCS#1 v1.5 plaintext with payload of
-        specified length and all payload bytes set to one specific value
+        specified length and all payload bytes set to the specific value.
+
+        If the payload size won't allow for 8 bytes of padding string,
+        the created message will be invalid.
         """
         if m_length > self.key_size - 3:
             raise ValueError("Too big message size, max size: {0}".format(
@@ -260,7 +266,8 @@ class CiphertextGenerator(object):
 
     def too_short_payload(self, m_length, padding_sub):
         """
-        Sends a valid PKCS#v 1.5 padding but for a smaller key.
+        Sends a valid-like PKCS#v 1.5 padding: one that starts with too many
+        zero bytes.
         Second parameter specifies how much shorter the padding should be.
         So to send a padding valid for 1024 bit key with 2048 bit key specify
         128 (bytes) as the second parameter.
