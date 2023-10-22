@@ -664,6 +664,9 @@ See the
 for an example script that first generates random ciphertexts and then
 reads them from a file.
 
+Alternatively use the `step2-alt.sh` or `step2-oaep-alt.sh` with example
+test harnesses in the `example` directory.
+
 ### Running the test
 
 The test can be executed on any machine, the statistical analysis is
