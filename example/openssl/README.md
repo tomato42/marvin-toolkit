@@ -1,7 +1,63 @@
+Test scripts for OpenSSL both with and without support for implicit rejection.
+
+OpenSSL *with* implicit rejection
+=================================
+If tested OpenSSL implements implicit rejection the length of the decrypted
+ciphertext can leak (as it's not a proxy for the 0 byte in the decrypted
+value). As such we need to generate ciphertexts that always decrypt to
+a message of the same length.
+
+Usage
+-----
+Run `step0.sh`, `step1.sh` as normal. Instead of running `step2.sh` run
+the `step2-marvin.sh` script.
+
+Compile this reproducer:
+```
+gcc -o time_decrypt time_decrypt.c -lcrypto
+```
+
+Execute it against one of the `ciphers.bin` files, for example the one
+for 2048 bit key:
+```
+./time_decrypt_legacy -i rsa2048_repeat/pms_values.bin \
+-o rsa2048_repeat/raw_times.bin -k rsa2048/pkcs8.pem -n 256
+```
+
+Convert the captured timing information to a format understandable by
+the analysis script:
+```
+PYTHONPATH=tlsfuzzer marvin-venv/bin/python3 tlsfuzzer/tlsfuzzer/extract.py \
+-l rsa2048_repeat/log.csv --raw-times rsa2048_repeat/raw_times.bin \
+-o rsa2048_repeat/ \
+--binary 8 --endian little --clock-frequency 2712.003
+```
+The `--clock-frequency` is the TSC frequency, as reported by the kernel on
+my machine:
+```
+[    1.506811] tsc: Refined TSC clocksource calibration: 2712.003 MHz
+```
+Specifying it is optional, but then the analysis will interpret clock
+ticks as seconds so interpretation of the results and graphs in terms of
+CPU clock cycles will be more complex.
+
+**Warning:** None of the clock sources used by the `time_decrypt_legacy.c`
+actually run at the same frequency as the CPU frequency! Remember to specify
+`--endian big` when running on s390x!
+
+Finally, run the analysis:
+```
+PYTHONPATH=tlsfuzzer marvin-venv/bin/python3 tlsfuzzer/tlsfuzzer/analysis.py \
+-o rsa2048_repeat/ --verbose
+```
+
+
+OpenSSL *without* implicit rejection
+====================================
 Test harness for OpenSSL *without* implicit rejection a.k.a Marvin workaround.
 
 Usage
-=====
+-----
 
 Run `step0.sh`, `step1.sh` as normal. Instead of running `step2.sh` run
 the `step2-alt.sh` script.
@@ -44,6 +100,9 @@ Finally, run the analysis:
 PYTHONPATH=tlsfuzzer marvin-venv/bin/python3 tlsfuzzer/tlsfuzzer/analysis.py \
 -o rsa2048_repeat/ --verbose
 ```
+
+Interpretation of results
+=========================
 
 Detailed information about produced output is available in
 [tlsfuzzer documentation](https://tlsfuzzer.readthedocs.io/en/latest/timing-analysis.html)
