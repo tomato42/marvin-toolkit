@@ -17,7 +17,7 @@ Compile this reproducer:
 gcc -o time_decrypt time_decrypt.c -lcrypto
 ```
 
-Execute it against one of the `ciphers.bin` files, for example the one
+Execute it against one of the `pms_values.bin` files, for example the one
 for 2048 bit key:
 ```
 ./time_decrypt_legacy -i rsa2048_repeat/pms_values.bin \
