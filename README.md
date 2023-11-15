@@ -7,7 +7,7 @@ Somorovsky, and Craig Young in their ROBOT Attack[[1]](https://robotattack.org/)
 The main page about the attack is at
 [https://people.redhat.com/~hkario/marvin/](https://people.redhat.com/~hkario/marvin/)
 
-Version: 0.3.2
+Version: 0.3.3
 
 Primary contact: Hubert Kario (hkario@redhat.com)
 
