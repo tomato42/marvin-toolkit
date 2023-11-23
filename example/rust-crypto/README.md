@@ -15,7 +15,7 @@ cargo build --release
 Execute reproducer against one of the `ciphers.bin` files, for example the one
 for 2048 bit key:
 ```
-cargo run --release -i rsa2048_repeat/ciphers.bin \
+cargo run --release -- -i rsa2048_repeat/ciphers.bin \
 -o rsa2048_repeat/raw_times.csv -k rsa2048/pkcs8.pem -n 256
 ```
 
@@ -27,7 +27,7 @@ PYTHONPATH=tlsfuzzer marvin-venv/bin/python3 tlsfuzzer/tlsfuzzer/extract.py \
 -o rsa2048_repeat/ \
 --clock-frequency 1000
 ```
-Since we're using a nanosecond resolution clock in the python script,
+Since we're using a nanosecond resolution clock in the application,
 we specify the clock frequency as 1000 MHz.
 
 Finally, run the analysis:
