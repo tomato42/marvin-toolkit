@@ -1,0 +1,91 @@
+#!/usr/bin/env node
+
+/*
+ * time_decrypt - data decryptor
+ *
+ * Copyright (c) 2016 Kenji Urushima (kenji.urushima@gmail.com)
+ * Copyright (c) 2023 Hubert Kario
+ *
+ * This software is licensed under the terms of the MIT License.
+ * https://kjur.github.io/jsrsasign/license
+ *
+ * The above copyright and license notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * Please use '-h' option for this script usage.
+ * ---------------------------------------------------------
+ * DESCRIPTION
+ *   This script decrypts a encrypted binary data file with
+ *   RSA or RSA-OAEP algorithm.
+ *
+ * USAGE
+ *   % time_decrypt enc.bin times.bin rsaprv.pem RSA  # with RSA alg
+ *   % time_decrypt enc.bin times.bin rsaprv.pem RSAOAEP  # with RSAOAEP alg
+ */
+
+var program = require('commander');
+var rs = require('jsrsasign');
+var rsu = require('jsrsasign-util');
+var fs = require('fs');
+
+program
+  .version('1.1.0 (2023-Nov-25)')
+  .usage('[options] <encrypted data file> <output time file> <PEM RSA private key file> <ciphertext length> [RSA|RSAOEAP*>]')
+  .description('encrypt data')
+  .parse(process.argv);
+
+if (program.args.length < 4)
+  throw "wrong number of arguments";
+
+var keyObj, inHex, encHex;
+var algName = "RSA";
+var keyStr = "";
+var inFileOrHex = program.args[0];
+var outFile = program.args[1];
+var keyFileOrStr = program.args[2];
+var ciphLength = Number(program.args[3]);
+if (program.args.length > 4) algName = program.args[4];
+
+try {
+  keyStr = rsu.readFile(keyFileOrStr);
+} catch(ex) {
+  keyStr = keyFileOrStr;
+}
+
+try {
+  keyObj = rs.KEYUTIL.getKey(keyStr);
+} catch(ex) {};
+
+
+const fileDescriptor = fs.openSync(inFileOrHex, 'r');
+
+const outFD = fs.openSync(outFile, 'w');
+
+const buffer = Buffer.alloc(256);
+
+let bytesRead;
+
+do {
+
+    bytesRead = fs.readSync(fileDescriptor, buffer, 0, buffer.length);
+
+    if (bytesRead > 0) {
+
+        inHex = buffer.toString('hex');
+
+        var startTime = process.hrtime();
+
+        var plainStr = rs.KJUR.crypto.Cipher.decrypt(inHex, keyObj, algName);
+
+        var endTime = process.hrtime();
+
+        var diff = (endTime[0] - startTime[0]) * 1000000000 + endTime[1] - startTime[1];
+
+        var outBuffer = Buffer.alloc(4);
+        outBuffer.writeInt32LE(diff, 0);
+        fs.writeSync(outFD, outBuffer);
+    }
+} while (bytesRead === buffer.length);
+
+fs.closeSync(fileDescriptor);
+fs.closeSync(outFD);
