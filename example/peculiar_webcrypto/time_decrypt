@@ -1,0 +1,81 @@
+#!/usr/bin/env node
+
+var program = require('commander');
+var fs = require('fs');
+const { Crypto } = require('@peculiar/webcrypto');
+
+const crypto = new Crypto();
+
+program
+  .version('0.0.0')
+  .usage('[options] <encrypted data file> <output time file or "-"> <DER RSA private key file> <ciphertext size> [pkcs1|pkcs1_oaep]')
+  .description('time decrypting data')
+  .parse(process.argv);
+
+if (program.args.length < 4)
+  throw "wrong number of arguments";
+
+var keyObj, inHex, encHex;
+var algName = "pkcs1";
+var keyStr = "";
+var inFileOrHex = program.args[0];
+var outFile = program.args[1];
+var keyFileOrStr = program.args[2];
+var readLength = Number(program.args[3]);
+if (program.args.length > 4) algName = program.args[4];
+
+keyStr = fs.readFileSync(keyFileOrStr);
+async function getKey(keyStr) {
+var privateKey = crypto.subtle.importKey(
+    "pkcs8",
+    keyStr,
+    {
+        name: "RSAES-PKCS1-v1_5",
+        hash: "SHA-256",
+    },
+    true,
+    ["encrypt", "decrypt", "wrapKey", "unwrapKey"],
+);
+keyObj = await privateKey;
+return keyObj;
+}
+
+var privateKey = getKey(keyStr);
+
+privateKey.then((keyObj) => {
+
+    const fileDescriptor = fs.openSync(inFileOrHex, 'r');
+
+    const outFD = fs.openSync(outFile, 'w');
+
+    const buffer = Buffer.alloc(readLength);
+    let bytesRead;
+
+
+    do {
+
+        bytesRead = fs.readSync(fileDescriptor, buffer, 0, buffer.length);
+
+        if (bytesRead > 0) {
+
+            var startTime = process.hrtime();
+
+            try {
+                //var plainStr = crypto.subtle.decrypt({name: "RSAES-PKCS1-v1_5"}, keyObj, buffer);
+                var plainStr = crypto.subtle.decrypt("RSAES-PKCS1-v1_5", keyObj, buffer);
+            } catch (ex) {};
+
+            var endTime = process.hrtime();
+
+            var diff = (endTime[0] - startTime[0]) * 1000000000 + endTime[1] - startTime[1];
+
+            var outBuffer = Buffer.alloc(4);
+            outBuffer.writeInt32LE(diff, 0);
+            fs.writeSync(outFD, outBuffer);
+        }
+    } while (bytesRead === buffer.length);
+
+    fs.closeSync(fileDescriptor);
+    fs.closeSync(outFD);
+});
+
