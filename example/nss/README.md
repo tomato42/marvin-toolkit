@@ -1,25 +1,31 @@
-Test harness for NSS *without* implicit rejection a.k.a Marvin workaround.
+Test harness for NSS *with* implicit rejection a.k.a Marvin workaround.
 
 Usage
 =====
 
 Run `step0.sh`, `step1.sh` as normal. Instead of running `step2.sh` run
-the `step2-alt.sh` script.
+the `step2-marvin.sh` script (or the `step2-oaep-alt.sh` when testing
+OAEP or RAW RSA operations).
 
 Compile this reproducer:
 ```
 gmake
 ```
 
-Execute it against one of the `ciphers.bin` files, for example the one
+Execute it against one of the `pms_values.bin` files, for example the one
 for 2048 bit key:
 ```
-./time_decrypt_legacy -i rsa2048_repeat/ciphers.bin \
+./time_decrypt_legacy -i rsa2048_repeat/pms_values.bin \
 -o rsa2048_repeat/raw_times.bin -k rsa2048/pkcs8.pem -n 256
 ```
 
-You can test different variations by addin the -r for raw RSA and -p for RSA-OAEP.
-The default is RSA-PKCS.
+You can test different variations by adding the `-r` for raw RSA and
+`-p` for RSA-OAEP (the default is RSA-PKCS#1 v1.5 decryption):
+
+```
+./time_decrypt_legacy -i rsa2048_repeat/ciphers.bin \
+-o rsa2048_repeat/raw_times.bin -k rsa2048/pkcs8.pem -n 256 -p
+```
 
 Convert the captured timing information to a format understandable by
 the analysis script:
