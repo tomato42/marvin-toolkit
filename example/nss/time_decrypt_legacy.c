@@ -1,6 +1,4 @@
-/* Script to test RSA decryption with the OpenSSL EVP_PKEY_decrypt() API
- * in OpenSSL before version 3.2.0 (i.e. before OpenSSL implemented
- * implicit rejection a.k.a. Marvin workaround)
+/* Script to test RSA decryption with the NSS freebl API
  */
 #include <memory.h>
 #include <string.h>
@@ -21,12 +19,14 @@
 #include <nssutil.h>
 
 void help(char *name) {
-    printf("Usage: %s -i file -o file -k file -n num [-h]\n", name);
+    printf("Usage: %s -i file -o file -k file -n num [-h -r -p]\n", name);
     printf("\n");
     printf(" -i file    File with concatenated ciphertexts to decrypt\n");
     printf(" -o file    File where to write the time to decrypt the ciphertext\n");
     printf(" -k file    File with the RSA private key in PEM format\n");
     printf(" -n num     Length of individual ciphertexts in bytes\n");
+    printf(" -r         use raw RSA rather than RSA-PKCS\n");
+    printf(" -p         use RSA-PSS rather than RSA-PKCS\n");
     printf(" -h         This message\n");
 }
 

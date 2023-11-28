@@ -1,4 +1,4 @@
-Test harness for OpenSSL *without* implicit rejection a.k.a Marvin workaround.
+Test harness for NSS *without* implicit rejection a.k.a Marvin workaround.
 
 Usage
 =====
@@ -17,6 +17,9 @@ for 2048 bit key:
 ./time_decrypt_legacy -i rsa2048_repeat/ciphers.bin \
 -o rsa2048_repeat/raw_times.bin -k rsa2048/pkcs8.pem -n 256
 ```
+
+You can test different variations by addin the -r for raw RSA and -p for RSA-PSS.
+The default is RSA-PKCS.
 
 Convert the captured timing information to a format understandable by
 the analysis script:
