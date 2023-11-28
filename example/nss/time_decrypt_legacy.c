@@ -26,7 +26,7 @@ void help(char *name) {
     printf(" -k file    File with the RSA private key in PEM format\n");
     printf(" -n num     Length of individual ciphertexts in bytes\n");
     printf(" -r         use raw RSA rather than RSA-PKCS\n");
-    printf(" -p         use RSA-PSS rather than RSA-PKCS\n");
+    printf(" -p         use RSA-OAEP rather than RSA-PKCS\n");
     printf(" -h         This message\n");
 }
 

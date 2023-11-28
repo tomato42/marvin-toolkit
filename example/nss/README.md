@@ -18,7 +18,7 @@ for 2048 bit key:
 -o rsa2048_repeat/raw_times.bin -k rsa2048/pkcs8.pem -n 256
 ```
 
-You can test different variations by addin the -r for raw RSA and -p for RSA-PSS.
+You can test different variations by addin the -r for raw RSA and -p for RSA-OAEP.
 The default is RSA-PKCS.
 
 Convert the captured timing information to a format understandable by
