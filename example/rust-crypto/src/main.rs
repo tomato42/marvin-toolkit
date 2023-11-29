@@ -5,6 +5,7 @@ use std::fs;
 use std::io::{Read, Write};
 use std::path::PathBuf;
 use std::time::Instant;
+use std::hint::black_box;
 
 #[derive(Parser, Debug)]
 #[command(about = "Measure timing of PKCS#1 v1.5 RSA decryption using RustCrypto rsa crate")]
@@ -58,7 +59,7 @@ fn main() -> Result<()> {
         assert!(n == buffer.len());
 
         let now = Instant::now();
-        let _ = privkey.decrypt(Pkcs1v15Encrypt, &buffer);
+        let _ = black_box(privkey.decrypt(Pkcs1v15Encrypt, black_box(&buffer)));
         writeln!(outfile, "{}", now.elapsed().as_nanos())?;
     }
 
