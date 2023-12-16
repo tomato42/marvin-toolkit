@@ -128,3 +128,37 @@ p-value of 1e-6 means 1 in a million chance that there isn't a side-channel).
 The other important information are the 95% Confidence Intervals reported,
 they specify how sensitive is the script (in this case it's unlikely that
 it would be able to detect a side channel smaller than 4.821e-08s or 48ns).
+
+Bonus: combined RSA and AES-CBC decryption *without* implicit rejection
+=======================================================================
+
+Typical use-cases for RSA encryption are encryption of the AES key
+for bulk encryption.
+
+The `time_rsa_aes.c` is an example script that does that in side-channel
+free way even with OpenSSL *without* implicit rejection.
+
+To execute it, run the `step0.sh` and `step1.sh` as normal.
+Then create the ciphertexts for the test using the `rsa-aes.sh` script.
+Note, it uses rsa1024 by default (as we've already tested that
+PKCS#1 v1.5 depadding works in side channel free manner above, we're
+just interested in the general valid and invalid padding messages, without
+differentiation on types of invalid PKCS#1 v1.5 padding).
+
+Compile the test harness:
+```
+gcc -O3 -ggdb2 -o time_rsa_aes time_rsa_aes.c -lcrypto
+```
+
+Run the test harness:
+```
+./time_rsa_aes -i rsa1024aes128_repeat/ciphers.bin \
+-o rsa1024aes128_repeat/raw_times.bin -k rsa1024/key.pem -n 128 -a 256
+```
+The `-n` option has the same meaning as in the normal script: size of
+RSA ciphertext in bytes, it must match the size of used key.
+The `-a` option specifies the size of the AES ciphertext in bytes,
+it must match the size specified using the `-l` parameter to `rsa-aes-gen.py`
+script.
+
+Extraction, analysis, and interpretation of the results is the same.
