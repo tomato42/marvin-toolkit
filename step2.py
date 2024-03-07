@@ -219,6 +219,26 @@ class CiphertextGenerator(object):
             [0] + random.choices(range(256), k=m_length)
         return self.encrypt_plaintext(plaintext)
 
+    types["valid_version"] = 3
+
+    def valid_version(self, m_length, first, second):
+        """
+        Create a random, valid PKCS#1 v1.5 plaintext with payload
+        of specified length that starts with the two specified bytes.
+
+        Useful for creating TLS-conforming PKCS#1v1.5 ciphertexts.
+
+        Doesn't check if the message size will allow
+        for the minimum of 8 byte padding!
+        """
+        if m_length > self.key_size - 3:
+            raise ValueError("Too big message size, max size: {0}".format(
+                self.key_size - 3))
+        plaintext = [0, 2] + \
+            random.choices(range(1, 256), k=self.key_size-2-1-m_length) + \
+            [0, first, second] + random.choices(range(256), k=(m_length-2))
+        return self.encrypt_plaintext(plaintext)
+
     types["zero_byte_in_padding"] = 2
 
     def zero_byte_in_padding(self, m_length, zero_byte):

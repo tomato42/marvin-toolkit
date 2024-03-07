@@ -290,6 +290,7 @@ Ciphertexts that generate plaintext with valid version byte:
 * `no_padding`
 * `header_only`
 * `valid`
+* `valid_version`
 * `zero_byte_in_padding`
 * `valid_repeated_byte_payload`
 * `too_short_payload`
@@ -317,6 +318,7 @@ Ciphertexts that generate plaintext with valid type byte:
 * `type_with_padding`
 * `header_only`
 * `valid`
+* `valid_version`
 * `zero_byte_in_padding`
 * `valid_repeated_byte_payload`
 * `too_short_payload`, for zero padding substraction
@@ -344,6 +346,7 @@ message_size) of the plaintext):
 * `signature_padding`
 * `no_padding`
 * `valid`
+* `valid_version`
 * `zero_byte_in_padding`
 * `valid_repeated_byte_payload`
 * `too_short_payload`
@@ -376,6 +379,7 @@ length will be longer than 8 bytes):
 * `signature_type`, for messages shorter than key_size - 10
 * `signature_padding`, for messages shorter than key_size - 10
 * `valid`, for messages shorter than key_size - 10
+* `valid_version`, for messages shorter than key_size - 10
 * `zero_byte_in_padding`, for messages shorter than key_size - 10 and
   zero_byte position higher than 8
 * `valid_repeated_byte_payload`, for messages shorter than key_size - 10
@@ -392,6 +396,7 @@ terminate on 0 byte):
 * `signature_padding`, for messages longer than key_size - 10
 * `no_padding`, though it depends on specifics of implementation
 * `valid`, for messages longer than key_size - 10
+* `valid_version`, for messages longer than key_size - 10
 * `zero_byte_in_padding`, for messages lenger than key_size - 10 and for
   zero_byte positions lower than or equal to 8
 * `valid_repeated_byte_payload`, for messages shorter than key_size - 10
@@ -414,6 +419,7 @@ at any of the bytes between 3 and 10 (inclusive) are:
   ciphertext for this test
 * `header_only`
 * `valid`, for messages shorter than key_size - 10
+* `valid_version`, for messages shorter than key_size - 10
 * `zero_byte_in_padding`, for messages shorter than key_size - 10 and
   zero_byte position higher than 8
 * `valid_repeated_byte_payload`, for messages shorter than key_size - 10
@@ -438,6 +444,7 @@ one of the probes that allow setting the length of the message:
 * `signature_padding`
 * `no_padding`
 * `valid`
+* `valid_version`
 * `zero_byte_in_padding`
 * `valid_repeated_byte_payload`
 * `too_short_payload`
@@ -486,7 +493,8 @@ When testing an invalid ciphertext:
 openssl rsautl -decrypt -pkcs -inkey rsa1024/key.pem \
 -in rsa1024_ciphertexts/no_structure -hexdump
 ```
-The output will look something like this:
+The output will look something like this (if openssl doesn't support implicit
+rejection):
 ```
 140518003775296:error:0407109F:rsa routines:RSA_padding_check_PKCS1_type_2:pkcs decoding error:crypto/rsa/rsa_pk1.c:251:
 140518003775296:error:04065072:rsa routines:rsa_ossl_private_decrypt:padding check failed:crypto/rsa/rsa_ossl.c:549:
@@ -533,6 +541,10 @@ look for side channels in an implementation:
 In case the protocol you're testing requires a specific message length, change
 the length from 48 to the required length and add the 48 to the last set of
 probes.
+
+In case you're testing the TLS specific decoder, use also `valid_version`
+with length of 48, and the two bytes specifying correct protocol version
+(3, 3 for TLS 1.2).
 
 Use the following commands to generate them for the previously generated keys:
 ```
