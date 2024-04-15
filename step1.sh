@@ -4,6 +4,10 @@
 
 for size in 1024 2048 4096; do
     name="rsa${size}"
+    if [[ -d $name ]]; then
+        echo "Directory $name already exists, skipping"
+        continue
+    fi
     tmp_file="$(mktemp)"
     if ! x509KeyGen -s $size $name &> "$tmp_file"; then
         echo "ERROR $size bit key generation failed" >&2
