@@ -3,6 +3,7 @@
 int main(int argc, char *argv[]) {
     int result = 1, r_ret;
     gcry_sexp_t pkey = NULL;
+    size_t plaintext_len = 0;
     size_t ciphertext_len = 0;
     FILE *fp;
     char *key_file_name = NULL, *in_file_name = NULL, *out_file_name = NULL;
@@ -95,6 +96,8 @@ int main(int argc, char *argv[]) {
         gcry_sexp_t ciphertext_sexp;
         gcry_sexp_t plaintext_sexp;
         size_t erroff;
+        gcry_sexp_t l1;
+        const void *a;
 
         if (r_ret = gcry_sexp_build(&ciphertext_sexp, &erroff,
                 "(enc-val (flags pkcs1) (rsa (a %b)))",
@@ -111,9 +114,23 @@ int main(int argc, char *argv[]) {
 
         r_ret = gcry_pk_decrypt(&plaintext_sexp, ciphertext_sexp, pkey);
 
-        gcry_sexp_release(plaintext_sexp);
-
         time_after = get_time_after();
+
+        if (r_ret != 0) {
+            fprintf(stderr, "Decryption failure\n");
+            fprintf(stderr, "%x\n", ciphertext[0]);
+            goto err;
+        }
+
+        l1 = gcry_sexp_find_token (plaintext_sexp, "value", 0);
+        a = gcry_sexp_nth_data (l1, 1, &plaintext_len);
+
+        if (plaintext_len != 48) {
+            fprintf(stderr, "Unexpected plaintext length: %lu\n", plaintext_len);
+            goto err;
+        }
+
+        gcry_sexp_release(plaintext_sexp);
 
         time_diff = time_after - time_before;
 
@@ -147,4 +164,3 @@ int main(int argc, char *argv[]) {
         close(out_fd);
     return result;
 }
-

@@ -1,5 +1,19 @@
 Test scripts for libgcrypt
 
+Generic setup
+=============
+
+Install dependencies by running the `step0.sh` script.
+
+Generate key with `step1.sh`.
+
+Convert the private key to a format the harness can load:
+```
+PYTHONPATH=tlsfuzzer marvin-venv/bin/python3 pkcs#8_to_gcrypt_txt.py \
+rsa2048/pkcs8.pem key.txt
+```
+
+
 libgcrypt *without* implicit rejection
 ====================================
 Test harness for libgcrypt *without* implicit rejection a.k.a Marvin workaround.
@@ -7,18 +21,11 @@ Test harness for libgcrypt *without* implicit rejection a.k.a Marvin workaround.
 Usage
 -----
 
-Run `step0.sh`, `step1.sh` as normal. Instead of running `step2.sh` run
-the `step2-alt.sh` script.
+Instead of running `step2.sh` run the `step2-alt.sh` script.
 
 Compile this reproducer:
 ```
 gcc -o time_decrypt time_decrypt.c -lgcrypt
-```
-
-Convert the private key to a format the harness can load:
-```
-PYTHONPATH=tlsfuzzer marvin-venv/bin/python3 pkcs#8_to_gcrypt_txt.py \
-rsa2048/pkcs8.pem key.txt
 ```
 
 Execute it against one of the `ciphers.bin` files, for example the one
@@ -28,12 +35,60 @@ for 2048 bit key:
 -o rsa2048_repeat/raw_times.bin -k key.txt -n 256
 ```
 
-Convert the captured timing information to a format understandable by
-the analysis script:
+libgcrypt with OAEP padding
+===========================
+
+The OAEP encryption in libgcrypt is vulnerable to the Marvin attack. The fixes are available
+in the same PR as fixes for the implicit rejection.
+
+Usage
+-----
+
+Generate new inputs using `step2-oaep-alt.sh`.
+
+Compile this reproducer:
 ```
+gcc -o time_decrypt_oaep time_decrypt_oaep.c -lgcrypt
+```
+
+Execute it against one of the `ciphers.bin` files, for example the one
+for 2048 bit key:
+```
+./time_decrypt_oaep -i rsa2048_oaep_repeat/ciphers.bin \
+-o rsa2048_oaep_repeat/raw_times.bin -k key.txt -n 256
+```
+
+libgcrypt with implicit rejection
+=================================
+The patches to implement the implicit rejection (including test vectors are available here):
+
+https://gitlab.com/redhat-crypto/libgcrypt/libgcrypt-mirror/-/merge_requests/19/
+
+Generate new inputs using `step2-marvin.sh` (warning, this takes most of the time!).
+
+Compile this reproducer:
+```
+gcc -o time_decrypt_ir time_decrypt_ir.c -lgcrypt
+```
+
+Execute it against one of the `ciphers.bin` files, for example the one
+for 2048 bit key:
+```
+./time_decrypt_ir -i rsa2048_repeat/pms_values.bin \
+-o rsa2048_repeat/raw_times.bin -k key.txt -n 256
+```
+
+Post-processing
+===============
+
+Convert the captured timing information to a format understandable by
+the analysis script (change the `TEST_DIR` variable to match the directory
+with your results):
+```
+TEST_DIR=rsa2048_repeat
 PYTHONPATH=tlsfuzzer marvin-venv/bin/python3 tlsfuzzer/tlsfuzzer/extract.py \
--l rsa2048_repeat/log.csv --raw-times rsa2048_repeat/raw_times.bin \
--o rsa2048_repeat/ \
+-l ${TEST_DIR}/log.csv --raw-times ${TEST_DIR}/raw_times.bin \
+-o ${TEST_DIR}/ \
 --binary 8 --endian little --clock-frequency 2712.003
 ```
 The `--clock-frequency` is the TSC frequency, as reported by the kernel on
@@ -45,14 +100,15 @@ Specifying it is optional, but then the analysis will interpret clock
 ticks as seconds so interpretation of the results and graphs in terms of
 CPU clock cycles will be more complex.
 
-**Warning:** None of the clock sources used by the `time_decrypt.c`
+**Warning:** None of the clock sources used by the test drivers
 actually run at the same frequency as the CPU frequency! Remember to specify
 `--endian big` when running on s390x!
 
 Finally, run the analysis:
 ```
+TEST_DIR=rsa2048_repeat
 PYTHONPATH=tlsfuzzer marvin-venv/bin/python3 tlsfuzzer/tlsfuzzer/analysis.py \
--o rsa2048_repeat/ --verbose
+-o ${TEST_DIR}/ --verbose
 ```
 
 Interpretation of results
