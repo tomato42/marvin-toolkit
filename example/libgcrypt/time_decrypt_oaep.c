@@ -97,7 +97,7 @@ int main(int argc, char *argv[]) {
         size_t erroff;
 
         if (r_ret = gcry_sexp_build(&ciphertext_sexp, &erroff,
-                "(enc-val (flags pkcs1) (rsa (a %b)))",
+                "(enc-val (flags oaep) (rsa (a %b)))",
                 ciphertext_len, ciphertext)) {
             fprintf(stderr, "ciphertext s-expression construction failed\n");
             fprintf(stderr, "error at pos %i\n", erroff);
@@ -110,6 +110,10 @@ int main(int argc, char *argv[]) {
         time_before = get_time_before();
 
         r_ret = gcry_pk_decrypt(&plaintext_sexp, ciphertext_sexp, pkey);
+        if (r_ret == 0) {
+            fprintf(stderr, "Decryption did not fail as expected\n");
+            goto err;
+        }
 
         gcry_sexp_release(plaintext_sexp);
 
@@ -147,4 +151,3 @@ int main(int argc, char *argv[]) {
         close(out_fd);
     return result;
 }
-
