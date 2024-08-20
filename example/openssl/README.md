@@ -101,6 +101,55 @@ PYTHONPATH=tlsfuzzer marvin-venv/bin/python3 tlsfuzzer/tlsfuzzer/analysis.py \
 -o rsa2048_repeat/ --verbose
 ```
 
+OpenSSL with the OAEP padding
+=============================
+Test harness for OpenSSL for the OAEP decryption.
+
+Usage
+-----
+Run `step0.sh`, `step1.sh` as normal. Instead of running `step2.sh` run
+the `step2-oaep-alt.sh` script.
+
+Compile this reproducer:
+```
+gcc -o time_decrypt_OAEP time_decrypt_OAEP.c -lcrypto
+```
+
+Execute it against one of the `ciphers.bin` files, for example the one
+for 2048 bit key:
+```
+./time_decrypt_OAEP -i rsa2048_oaep_repeat/ciphers.bin \
+-o rsa2048_oaep_repeat/raw_times.bin -k rsa2048/pkcs8.pem -n 256
+```
+
+Convert the captured timing information to a format understandable by
+the analysis script:
+```
+PYTHONPATH=tlsfuzzer marvin-venv/bin/python3 tlsfuzzer/tlsfuzzer/extract.py \
+-l rsa2048_oaep_repeat/log.csv --raw-times rsa2048_oaep_repeat/raw_times.bin \
+-o rsa2048_oaep_repeat/ \
+--binary 8 --endian little --clock-frequency 2712.003
+```
+
+The `--clock-frequency` is the TSC frequency, as reported by the kernel on
+my machine:
+```
+[    1.506811] tsc: Refined TSC clocksource calibration: 2712.003 MHz
+```
+Specifying it is optional, but then the analysis will interpret clock
+ticks as seconds so interpretation of the results and graphs in terms of
+CPU clock cycles will be more complex.
+
+**Warning:** None of the clock sources used by the `time_decrypt_legacy.c`
+actually run at the same frequency as the CPU frequency! Remember to specify
+`--endian big` when running on s390x!
+
+Finally, run the analysis:
+```
+PYTHONPATH=tlsfuzzer marvin-venv/bin/python3 tlsfuzzer/tlsfuzzer/analysis.py \
+-o rsa2048_oaep_repeat/ --verbose
+```
+
 Interpretation of results
 =========================
 
