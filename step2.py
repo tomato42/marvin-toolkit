@@ -64,6 +64,23 @@ class CiphertextGenerator(object):
         return self.encrypt_plaintext(plaintext)
 
     types["no_header_with_payload"] = 1
+    
+    def no_structure_with_chosen_plaintext(self, chosen_plaintext):
+        """
+        Create a plaintext that can't be mistaken for PKCS#1 v1.5 padding.
+        Has incorrect header and no separator between PS and M.
+
+        Makes sure to also not suggest a PKCS#1 v1.5 signature padding.
+        
+        arguments:
+          - chosen_plaintext: a int array of bytes for both the start of the file and his content. Bytes must be of number between 0 and 255
+        """
+        plaintext = chosen_plaintext + \
+                    random.choices(range(1, 256), k=self.key_size-2)
+                    
+        return self.encrypt_plaintext(plaintext)
+
+    types["no_header_with_payload"] = 1
 
     def no_header_with_payload(self, m_length):
         """
