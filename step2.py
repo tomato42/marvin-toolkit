@@ -63,7 +63,7 @@ class CiphertextGenerator(object):
                     random.choices(range(1, 256), k=self.key_size-2)
         return self.encrypt_plaintext(plaintext)
 
-    types["no_header_with_payload"] = 1
+    types["no_structure_with_chosen_plaintext"] = 1
     
     def no_structure_with_chosen_plaintext(self, chosen_plaintext):
         """
@@ -75,7 +75,8 @@ class CiphertextGenerator(object):
         arguments:
           - chosen_plaintext: a int array of bytes for both the start of the file and his content. Bytes must be of number between 0 and 255
         """
-        plaintext = chosen_plaintext + \
+        
+        plaintext = chosen_plaintext  + \
                     random.choices(range(1, 256), k=self.key_size-2)
                     
         return self.encrypt_plaintext(plaintext)
@@ -353,12 +354,16 @@ def single_shot(out_dir, pub, args):
 
     for arg in args:
         ret = arg.split('=')
+        
+        print(arg)
+        print(ret)
         if len(ret) == 1:
             name = ret[0]
             params = []
         elif len(ret) == 2:
             name, params = ret
             ret = params.split(' ')
+            
             params = [int(i, 16) if i[:2] == '0x' else int(i) for i in ret]
         else:
             print("ERROR: Incorrect formatting of option: {0}".format(arg))
@@ -370,6 +375,9 @@ def single_shot(out_dir, pub, args):
                   file=sys.stderr)
             sys.exit(1)
 
+
+        print(name)
+        print(params)
         ciphertext = getattr(generator, name)(*params)
 
         file_name = "_".join([name] + [str(i) for i in params])
