@@ -20,7 +20,7 @@ gcc -o time_decrypt time_decrypt.c -lcrypto
 Execute it against one of the `pms_values.bin` files, for example the one
 for 2048 bit key:
 ```
-./time_decrypt_legacy -i rsa2048_repeat/pms_values.bin \
+./time_decrypt -i rsa2048_repeat/pms_values.bin \
 -o rsa2048_repeat/raw_times.bin -k rsa2048/pkcs8.pem -n 256
 ```
 
@@ -41,7 +41,7 @@ Specifying it is optional, but then the analysis will interpret clock
 ticks as seconds so interpretation of the results and graphs in terms of
 CPU clock cycles will be more complex.
 
-**Warning:** None of the clock sources used by the `time_decrypt_legacy.c`
+**Warning:** None of the clock sources used by the `time_decrypt.c`
 actually run at the same frequency as the CPU frequency! Remember to specify
 `--endian big` when running on s390x!
 
