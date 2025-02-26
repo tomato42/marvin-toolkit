@@ -1,5 +1,6 @@
 # marvin-toolkit
-A set of tools and instructions to check if a library is vulnerable to the Marvin attack.
+A set of Linux tools and instructions to check if a library is vulnerable
+to the Marvin attack.
 
 Marvin attack is a continuation of work published by Hanno Böck, Juraj
 Somorovsky, and Craig Young in their ROBOT Attack[[1]](https://robotattack.org/).
@@ -9,7 +10,7 @@ The main page about the attack is at
 
 Version: 0.3.5
 
-Primary contact: Hubert Kario (hkario@redhat.com)
+Primary contact: Alicja Kario (hkario@redhat.com)
 
 ## The vulnerability
 
