@@ -110,6 +110,23 @@ class CiphertextGenerator(object):
             [0] + random.choices(range(256), k=m_length)
         return self.encrypt_plaintext(plaintext)
 
+    types["no_version"] = 1
+
+    def no_version(self, m_length):
+        """
+        Creates a PKCS#1 v1.5 plaintext with the first byte omitted
+        (0x00), correct padding type (2) and a
+        null separator between PS (padding) and M (payload) with
+        random payload of specified length.
+        """
+        if m_length > self.key_size - 2:
+            raise ValueError("Too big message size, max size: {0}".format(
+                self.key_size - 3))
+        plaintext = [2] + \
+            random.choices(range(1, 256), k=self.key_size-1-1-m_length) + \
+            [0] + random.choices(range(256), k=m_length)
+        return self.encrypt_plaintext(plaintext)
+
     types["type_only"] = 0
 
     def type_only(self):
