@@ -9,6 +9,7 @@ from tlslite.x509 import X509
 from tlslite.utils.cryptomath import divceil
 from tlsfuzzer.utils.log import Log
 from tlsfuzzer.utils.progress_report import progress_report
+from tlslite.utils.keyfactory import parsePEMKey
 
 
 if sys.version_info < (3, 7):
@@ -16,7 +17,7 @@ if sys.version_info < (3, 7):
     sys.exit(1)
 
 
-def get_key(cert_file):
+def get_pubkey(cert_file):
     """
     Read an X.509 certificate, extract public key from it.
     """
@@ -28,6 +29,17 @@ def get_key(cert_file):
     return x509.publicKey
 
 
+def get_privkey(key_file):
+    """
+    Read a PKCS#8 file with a private key
+    """
+    with open(key_file, "r") as f:
+        key_txt = f.read()
+
+    key = parsePEMKey(key_txt, private=True, implementations=["python"])
+    return key
+
+
 class CiphertextGenerator(object):
     """
     Class for generating different kinds of RSA plaintexts
@@ -35,8 +47,9 @@ class CiphertextGenerator(object):
 
     types = {}
 
-    def __init__(self, public_key):
+    def __init__(self, public_key, private_key=None):
         self.pub_key = public_key
+        self.priv_key = private_key
         self.key_size = divceil(len(public_key), 8)
 
     def encrypt_plaintext(self, plaintext):
@@ -321,6 +334,110 @@ class CiphertextGenerator(object):
             [0] + random.choices(range(256), k=m_length)
         return self.encrypt_plaintext(plaintext)
 
+    types["multiple_of_p"] = 1
+
+    def multiple_of_p(self, bits_of_random):
+        """
+        Sends a ciphertext that is a multiple of the private prime `p`.
+        The parameter specifies how many bits of randomness should the
+        `p` be multiplied by.
+        """
+        val = self.priv_key.p * random.randrange(1, 2**bits_of_random)
+        return int(val).to_bytes(self.key_size, "big")
+
+    types["p_plus_rand"] = 1
+
+    def p_plus_rand(self, bits_of_random):
+        """
+        Sends a ciphertext that is equal to `p` plus
+        a small random value (2**64).
+        """
+        val = int(self.priv_key.p + random.randrange(1, 2**bits_of_random))\
+                .to_bytes(self.key_size, "big")
+        return val
+
+    types["p_minus_rand"] = 1
+
+    def p_minus_rand(self, bits_of_random):
+        """
+        Sends a ciphertext that is equal to `p` minus
+        a small random value (2**64).
+        """
+        val = int(self.priv_key.p - random.randrange(1, 2**bits_of_random))\
+                .to_bytes(self.key_size, "big")
+        return val
+
+    types["words_of_p"] = 1
+
+    def words_of_p(self, word):
+        """
+        Sends a ciphertext that is comprised of only one word (64 bits) of the
+        prime `p`. Least significant word is 0, most significant depends on
+        key size.
+        """
+        val = int(self.priv_key.p).to_bytes(self.key_size, "big")
+        ret = bytearray(self.key_size)
+        ret[-((word+1)*8):-(word*8)] = val[-((word+1)*8):-(word*8)]
+        return ret
+
+    types["words_of_p_plus_rand"] = 1
+
+    def words_of_p_plus_rand(self, word):
+        """
+        Sends a ciphertext that is comprised of only significant word (64 bits)
+        of the prime `p` plus a small random value (2**64).
+        Least significant word is 0, most significant depends on
+        key size.
+        """
+        val = int(self.priv_key.p + random.randrange(1, 2**64))\
+                .to_bytes(self.key_size, "big")
+        ret = bytearray(self.key_size)
+        ret[-((word+1)*8):-(word*8)] = val[-((word+1)*8):-(word*8)]
+        ret[-8:] = val[-8:]
+        return ret
+
+    types["words_of_p_minus_rand"] = 1
+
+    def words_of_p_minus_rand(self, word):
+        """
+        Sends a ciphertext that is comprised of only significant word (64 bits)
+        of the prime `p` minus a small random value (2**64).
+        Least significant word is 0, most significant depends on
+        key size.
+        """
+        val = int(self.priv_key.p - random.randrange(1, 2**64))\
+                .to_bytes(self.key_size, "big")
+        ret = bytearray(self.key_size)
+        ret[-((word+1)*8):-(word*8)] = val[-((word+1)*8):-(word*8)]
+        ret[-8:] = val[-8:]
+        return ret
+
+
+    types["almost_words_of_p"] = 2
+
+    def almost_words_of_p(self, word, difference):
+        """
+        Sends a ciphertext where the value is the word + a small difference,
+        with a random value in low order bits.
+        """
+        val = int(self.priv_key.p + (difference << (word * 64)))\
+                .to_bytes(self.key_size, "big")
+
+        ret = bytearray(self.key_size)
+        ret[-((word+1)*8):-(word*8)] = val[-((word+1)*8):-(word*8)]
+        ret[-8:] = random.randbytes(8)
+        return ret
+
+    types["random_word"] = 1
+
+    def random_word(self, word):
+        """
+        Sends a ciphertext where just one word is set to a random value
+        """
+        ret = bytearray(self.key_size)
+        ret[-((word+1)*8):-(word*8)] = random.randbytes(8)
+        return ret
+
 
 def help_msg():
     print(
@@ -348,8 +465,8 @@ Supported probes:
     i, j) for i, j in CiphertextGenerator.types.items())))
 
 
-def single_shot(out_dir, pub, args):
-    generator = CiphertextGenerator(pub)
+def single_shot(out_dir, pub, priv, args):
+    generator = CiphertextGenerator(pub, priv)
 
     for arg in args:
         ret = arg.split('=')
@@ -378,8 +495,8 @@ def single_shot(out_dir, pub, args):
             out_file.write(ciphertext)
 
 
-def gen_timing_probes(out_dir, pub, args, repeat, verbose=False):
-    generator = CiphertextGenerator(pub)
+def gen_timing_probes(out_dir, pub, priv, args, repeat, verbose=False):
+    generator = CiphertextGenerator(pub, priv)
 
     probes = {}
     probe_names = []
@@ -463,17 +580,20 @@ def gen_timing_probes(out_dir, pub, args, repeat, verbose=False):
 
 if __name__ == '__main__':
     cert = None
+    priv = None
     out_dir = "ciphertexts"
     repeat = None
     force_dir = False
     verbose = False
 
     argv = sys.argv[1:]
-    opts, args = getopt.getopt(argv, "c:o:", ["help", "describe=", "repeat=",
+    opts, args = getopt.getopt(argv, "c:o:k:", ["help", "describe=", "repeat=",
                                               "force", "verbose"])
     for opt, arg in opts:
         if opt == "-c":
             cert = arg
+        elif opt == "-k":
+            key = arg
         elif opt == "-o":
             out_dir = arg
         elif opt == "--help":
@@ -509,10 +629,15 @@ if __name__ == '__main__':
         print("ERROR: repeat must be a positive integer", file=sys.stder)
         sys.exit(1)
 
-    pub = get_key(cert)
+    pub = get_pubkey(cert)
+    if key:
+        priv = get_privkey(key)
 
     print("working with {0}bit key".format(len(pub)))
     print("Will save ciphertexts to {0}".format(out_dir))
+
+    if priv and priv.p and priv.q:
+        print("Private key loaded")
 
     try:
         os.mkdir(out_dir)
@@ -523,6 +648,6 @@ if __name__ == '__main__':
             raise
 
     if repeat is None:
-        single_shot(out_dir, pub, args)
+        single_shot(out_dir, pub, priv, args)
     else:
-        gen_timing_probes(out_dir, pub, args, repeat, verbose)
+        gen_timing_probes(out_dir, pub, priv, args, repeat, verbose)
